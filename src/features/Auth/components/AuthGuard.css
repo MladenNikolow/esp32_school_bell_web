@@ -1,0 +1,79 @@
+/* src/features/Auth/components/AuthGuard.css */
+/* Loading screen styling for authentication initialization */
+
+.auth-loading {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.loading-container {
+  text-align: center;
+  padding: 40px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.loading-spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid #e3f2fd;
+  border-top: 4px solid #1976d2;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 20px;
+}
+
+.loading-text {
+  color: #424242;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Responsive design */
+@media (max-width: 480px) {
+  .loading-container {
+    margin: 20px;
+    padding: 32px 24px;
+  }
+  
+  .loading-spinner {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .loading-text {
+    font-size: 14px;
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .auth-loading {
+    background: linear-gradient(135deg, #263238 0%, #37474f 100%);
+  }
+  
+  .loading-container {
+    background: #424242;
+    border-color: #616161;
+  }
+  
+  .loading-spinner {
+    border-color: #616161;
+    border-top-color: #1976d2;
+  }
+  
+  .loading-text {
+    color: #e0e0e0;
+  }
+}

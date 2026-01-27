@@ -2,7 +2,7 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react-swc'
 import path from 'path'
 
-const deviceIP = '192.168.201.101'
+const deviceIP = '192.168.100.184' // replace with your ESP32's IP address
 
 export default defineConfig({
   plugins: [react()],

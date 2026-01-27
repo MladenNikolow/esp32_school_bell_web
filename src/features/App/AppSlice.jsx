@@ -1,16 +1,13 @@
 // src/features/mode/modeSlice.js
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import HttpRequestAgent from '../../utils/HttpRequestAgent.js';
 
 // Async thunk to load mode from ESP32
 export const loadMode = createAsyncThunk(
   'mode/loadMode',
   async (_, { rejectWithValue, signal }) => {
-    const controller = new AbortController();
-    signal.addEventListener('abort', () => controller.abort());
     try {
-      const res = await fetch('/api/mode', { signal: controller.signal });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
+      const data = await HttpRequestAgent.get('/api/mode', signal);
       return data.mode ?? '';
     } catch (err) {
       return rejectWithValue(err.message ?? 'Failed to load');
@@ -23,13 +20,7 @@ export const updateMode = createAsyncThunk(
   'mode/updateMode',
   async (modeValue, { rejectWithValue }) => {
     try {
-      const res = await fetch('/api/mode', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode: modeValue }),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
+      const data = await HttpRequestAgent.post('/api/mode', { mode: modeValue });
       return { mode: modeValue, response: data };
     } catch (err) {
       return rejectWithValue(err.message ?? 'Failed to save');
