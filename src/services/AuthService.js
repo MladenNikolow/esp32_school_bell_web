@@ -13,8 +13,6 @@ import { API_CONFIG } from '../config/apiConfig.js';
 /**
  * @typedef {Object} UserInfo
  * @property {string} username - User's username
- * @property {string} [email] - User's email (optional)
- * @property {string} [role] - User's role (optional)
  */
 
 /**

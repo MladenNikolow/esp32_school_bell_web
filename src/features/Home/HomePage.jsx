@@ -1,16 +1,13 @@
-// src/features/Auth/components/HomePage.jsx
-import React, { useEffect } from 'react';
+﻿import React, { useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { logoutUser } from '../AuthSlice.js';
-import { loadMode, updateMode, setModeLocal, clearError } from '../../App/AppSlice.jsx';
-import './HomePage.css';
+import { logoutUser } from '../Auth/AuthSlice.js';
+import { loadMode, updateMode, setModeLocal, clearError } from '../App/AppSlice.jsx';
 
 export default function HomePage() {
   const dispatch = useDispatch();
   const { user, isLoading: authLoading } = useSelector((state) => state.auth);
   const { value: mode, connected, loading, saving, error } = useSelector((state) => state.mode);
 
-  // Load mode data on component mount
   useEffect(() => {
     dispatch(loadMode());
   }, [dispatch]);
@@ -18,10 +15,8 @@ export default function HomePage() {
   const handleLogout = async () => {
     try {
       await dispatch(logoutUser()).unwrap();
-      // Navigation will be handled by auth state change
     } catch (error) {
       console.warn('Logout failed:', error);
-      // Force logout even if server call fails
     }
   };
 
@@ -45,7 +40,7 @@ export default function HomePage() {
     <div className="home-container">
       <div className="home-header">
         <div className="header-content">
-          <h1>Ringy Control Panel</h1>
+          <h1>ESP32 Control Panel</h1>
           <div className="user-info">
             <span className="welcome-text">
               Welcome, {user?.username || 'User'}
@@ -66,15 +61,9 @@ export default function HomePage() {
           <div className="status-section">
             <h2>Device Status</h2>
             <div className="status-indicator">
-              <div className={`status-dot ${connected ? 'connected' : 'disconnected'}`}></div>
+              <div className="status-dot"></div>
               <span className="status-text">
-                {loading ? (
-                  'Checking device...'
-                ) : connected ? (
-                  'Connected'
-                ) : (
-                  'Disconnected'
-                )}
+                {loading ? 'Checking device...' : connected ? 'Connected' : 'Disconnected'}
               </span>
             </div>
           </div>
@@ -83,12 +72,7 @@ export default function HomePage() {
             <div className="error-section">
               <div className="error-message">
                 {error}
-                <button 
-                  className="error-dismiss"
-                  onClick={handleClearError}
-                >
-                  ✕
-                </button>
+                <button className="error-dismiss" onClick={handleClearError}></button>
               </div>
             </div>
           )}
@@ -96,9 +80,7 @@ export default function HomePage() {
           <div className="mode-section">
             <h2>Mode Control</h2>
             <div className="mode-control">
-              <label htmlFor="mode-input" className="mode-label">
-                Current Mode:
-              </label>
+              <label htmlFor="mode-input" className="mode-label">Current Mode:</label>
               <div className="mode-input-group">
                 <input
                   id="mode-input"
@@ -121,11 +103,7 @@ export default function HomePage() {
           </div>
 
           <div className="actions-section">
-            <button
-              className="retry-button"
-              onClick={handleRetryConnection}
-              disabled={loading}
-            >
+            <button className="retry-button" onClick={handleRetryConnection} disabled={loading}>
               {loading ? 'Refreshing...' : 'Refresh Status'}
             </button>
           </div>
@@ -136,21 +114,15 @@ export default function HomePage() {
           <div className="info-grid">
             <div className="info-item">
               <span className="info-label">Connection:</span>
-              <span className="info-value">
-                {connected ? 'Active' : 'Inactive'}
-              </span>
+              <span className="info-value">{connected ? 'Active' : 'Inactive'}</span>
             </div>
             <div className="info-item">
               <span className="info-label">Mode:</span>
-              <span className="info-value">
-                {mode || 'Not set'}
-              </span>
+              <span className="info-value">{mode || 'Not set'}</span>
             </div>
             <div className="info-item">
               <span className="info-label">User:</span>
-              <span className="info-value">
-                {user?.username || 'Unknown'}
-              </span>
+              <span className="info-value">{user?.username || 'Unknown'}</span>
             </div>
           </div>
         </div>

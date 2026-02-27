@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { loginUser, clearAuthError } from '../AuthSlice.js';
-import './LoginPage.css';
 
 export default function LoginPage() {
   const dispatch = useDispatch();

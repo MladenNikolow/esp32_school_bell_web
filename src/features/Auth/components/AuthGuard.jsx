@@ -3,8 +3,7 @@ import React, { useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { initializeAuth } from '../AuthSlice.js';
 import LoginPage from './LoginPage.jsx';
-import HomePage from './HomePage.jsx';
-import './AuthGuard.css';
+import HomePage from '../../Home/HomePage.jsx';
 
 /**
  * AuthGuard component that handles authentication routing

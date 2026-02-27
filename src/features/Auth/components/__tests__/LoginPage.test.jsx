@@ -201,5 +201,4 @@ describe('LoginPage Component', () => {
     
     fireEvent.keyDown(passwordInput, { key: 'Enter', code: 'Enter' });
     // Form submission would be tested with proper mocking
-  });
-});
+  

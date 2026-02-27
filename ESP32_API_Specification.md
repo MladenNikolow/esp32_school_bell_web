@@ -24,7 +24,7 @@ This document outlines all the HTTP endpoints you need to implement in your ESP3
   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
   "user": {
     "username": "admin",
-    "role": "admin"
+    "role": "admin" //user
   },
   "message": "Login successful"
 }
