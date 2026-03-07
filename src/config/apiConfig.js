@@ -19,6 +19,11 @@ export const API_CONFIG = {
     MODE: '/api/mode',
     STATUS: '/api/status',
     HEALTH: '/api/health',
+
+    // WiFi configuration endpoints
+    WIFI_STATUS: '/api/wifi/status',
+    WIFI_NETWORKS: '/api/wifi/networks',
+    WIFI_CONFIG: '/api/wifi/config',
   },
   
   // Public endpoints that don't require authentication
@@ -26,6 +31,9 @@ export const API_CONFIG = {
     '/api/login',
     '/api/health',
     '/api/status',
+    '/api/wifi/status',
+    '/api/wifi/networks',
+    '/api/wifi/config',
   ],
   
   // HTTP status codes

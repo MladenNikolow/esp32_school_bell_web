@@ -2,12 +2,14 @@
 import { configureStore } from '@reduxjs/toolkit';
 import modeReducer from '../features/App/AppSlice'
 import authReducer from '../features/Auth/AuthSlice'
+import wifiConfigReducer from '../features/WiFiConfig/WiFiConfigSlice.js'
 import { authMiddleware, tokenValidationMiddleware } from '../middleware/authMiddleware.js';
 
 export const store = configureStore({
   reducer: {
     mode: modeReducer,
     auth: authReducer,
+    wifiConfig: wifiConfigReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
