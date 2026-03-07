@@ -35,6 +35,7 @@ const wifiConfigSlice = createSlice({
   name: 'wifiConfig',
   initialState: {
     isApMode: false,
+    wifiModeChecked: false,
     apSsid: '',
     networks: [],
     networksLoading: false,
@@ -55,6 +56,7 @@ const wifiConfigSlice = createSlice({
     builder
       // checkWifiMode
       .addCase(checkWifiMode.fulfilled, (state, action) => {
+        state.wifiModeChecked = true;
         if (action.payload && action.payload.mode === 'AP') {
           state.isApMode = true;
           state.apSsid = action.payload.ap_ssid || '';
@@ -63,6 +65,7 @@ const wifiConfigSlice = createSlice({
         }
       })
       .addCase(checkWifiMode.rejected, (state) => {
+        state.wifiModeChecked = true;
         state.isApMode = false;
       })
       // fetchNetworks
