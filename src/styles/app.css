@@ -428,7 +428,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  max-height: 280px;
+  max-height: 400px;
   overflow-y: auto;
   border: 1px solid #e0e0e0;
   border-radius: 8px;
@@ -437,37 +437,129 @@ body {
 }
 
 .network-item {
+  border-radius: 6px;
+  background: white;
+  border: 1px solid transparent;
+  transition: all 0.15s ease;
+  overflow: hidden;
+}
+
+.network-item-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 12px 16px;
-  border-radius: 6px;
   cursor: pointer;
   font-size: 15px;
   color: #212121;
-  background: white;
-  border: 1px solid transparent;
-  transition: all 0.15s ease;
   user-select: none;
 }
 
-.network-item:hover {
+.network-item-header:hover {
   background: #f1f8e9;
-  border-color: #a5d6a7;
 }
 
-.network-item.selected {
-  background: #e8f5e9;
+.network-item.expanded {
   border-color: #388e3c;
-  color: #1b5e20;
-  font-weight: 500;
+  background: #f1f8e9;
 }
 
-.signal-bar {
-  font-size: 13px;
-  color: #757575;
+.network-item.expanded .network-item-header {
+  font-weight: 500;
+  color: #1b5e20;
+  border-bottom: 1px solid #c8e6c9;
+}
+
+.network-ssid {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+.network-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.expand-arrow {
+  font-size: 10px;
+  color: #9e9e9e;
+  margin-left: 4px;
+}
+
+.network-item.expanded .expand-arrow {
+  color: #388e3c;
+}
+
+.network-item-body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.network-connect-btn {
+  align-self: stretch;
+  padding: 10px 24px !important;
+  font-size: 14px !important;
+}
+
+.manual-entry-toggle {
+  display: block;
+  margin: 16px auto 0;
+  background: none;
+  border: none;
+  color: #388e3c;
+  font-size: 14px;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 4px 0;
+}
+
+.manual-entry-toggle:hover {
+  color: #2e7d32;
+}
+
+.manual-entry-form {
+  margin-top: 16px;
+  padding: 16px;
+  background: #f1f8e9;
+  border-radius: 8px;
+  border: 1px solid #c8e6c9;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Signal strength icon */
+
+.signal-icon {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 16px;
+}
+
+.signal-bar-segment {
+  display: inline-block;
+  width: 4px;
+  border-radius: 1px;
+  background: #d0d0d0;
+}
+
+.signal-bar-segment:nth-child(1) { height: 4px; }
+.signal-bar-segment:nth-child(2) { height: 7px; }
+.signal-bar-segment:nth-child(3) { height: 11px; }
+.signal-bar-segment:nth-child(4) { height: 16px; }
+
+.signal-bar-segment.active[data-level="4"] { background: #2e7d32; }
+.signal-bar-segment.active[data-level="3"] { background: #558b2f; }
+.signal-bar-segment.active[data-level="2"] { background: #f9a825; }
+.signal-bar-segment.active[data-level="1"] { background: #d32f2f; }
 
 .lock-icon {
   font-size: 14px;
@@ -848,46 +940,88 @@ body {
 }
 
 .network-list {
-  max-height: 260px;
+  max-height: 400px;
   overflow-y: auto;
   border: 1px solid #e0e0e0;
   border-radius: 8px;
 }
 
 .network-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 16px;
-  cursor: pointer;
-  transition: background 0.15s ease;
   border-bottom: 1px solid #f0f0f0;
+  overflow: hidden;
 }
 
 .network-item:last-child {
   border-bottom: none;
 }
 
-.network-item:hover {
+.network-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.network-item-header:hover {
   background: #e3f2fd;
 }
 
-.network-item.selected {
-  background: #bbdefb;
+.network-item.expanded {
+  background: #e3f2fd;
+}
+
+.network-item.expanded .network-item-header {
   font-weight: 500;
+  border-bottom: 1px solid #bbdefb;
 }
 
-.signal-bar {
-  font-size: 13px;
-  color: #666;
-  min-width: 64px;
-  text-align: right;
+.network-item-body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
-.signal-bar[data-level="4"] { color: #2e7d32; }
-.signal-bar[data-level="3"] { color: #558b2f; }
-.signal-bar[data-level="2"] { color: #f9a825; }
-.signal-bar[data-level="1"] { color: #d32f2f; }
+.network-connect-btn {
+  align-self: stretch;
+}
+
+.manual-entry-toggle {
+  display: block;
+  margin: 16px auto 0;
+  background: none;
+  border: none;
+  color: #1976d2;
+  font-size: 14px;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.manual-entry-toggle:hover {
+  color: #1565c0;
+}
+
+.manual-entry-form {
+  margin-top: 16px;
+  padding: 16px;
+  background: #e3f2fd;
+  border-radius: 8px;
+  border: 1px solid #bbdefb;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.signal-bar-segment {
+  background: #d0d0d0;
+}
+
+.signal-bar-segment.active[data-level="4"] { background: #2e7d32; }
+.signal-bar-segment.active[data-level="3"] { background: #558b2f; }
+.signal-bar-segment.active[data-level="2"] { background: #f9a825; }
+.signal-bar-segment.active[data-level="1"] { background: #d32f2f; }
 
 .lock-icon {
   font-size: 14px;
@@ -1016,22 +1150,55 @@ body {
 
   .network-list {
     border-color: #616161;
+    background: #37474f;
   }
 
   .network-item {
     border-color: #616161;
+    background: #424242;
   }
 
-  .network-item:hover {
+  .network-item-header {
+    color: #e0e0e0;
+  }
+
+  .network-item-header:hover {
     background: #546e7a;
   }
 
-  .network-item.selected {
+  .network-item.expanded {
+    background: #37474f;
+    border-color: #90caf9;
+  }
+
+  .network-item.expanded .network-item-header {
+    color: #90caf9;
+    border-bottom-color: #546e7a;
+  }
+
+  .network-item-body {
     background: #37474f;
   }
 
-  .signal-bar {
-    color: #bdbdbd;
+  .expand-arrow {
+    color: #9e9e9e;
+  }
+
+  .manual-entry-toggle {
+    color: #90caf9;
+  }
+
+  .manual-entry-toggle:hover {
+    color: #bbdefb;
+  }
+
+  .manual-entry-form {
+    background: #37474f;
+    border-color: #546e7a;
+  }
+
+  .signal-bar-segment {
+    background: #616161;
   }
 
   .success-banner {
