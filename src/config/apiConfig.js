@@ -16,7 +16,6 @@ export const API_CONFIG = {
     REFRESH_TOKEN: '/api/refresh-token',
     
     // Application endpoints
-    MODE: '/api/mode',
     STATUS: '/api/status',
     HEALTH: '/api/health',
 

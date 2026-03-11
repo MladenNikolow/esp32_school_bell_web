@@ -248,17 +248,17 @@ class HttpRequestAgent {
   }
 
   /**
-   * Clean JSON string by escaping unescaped control characters
+   * Clean JSON string by stripping unescaped control characters
    * @param {string} jsonString - Raw JSON string
    * @returns {string} Cleaned JSON string
    * @private
    */
   _cleanJsonString(jsonString) {
-    // Replace unescaped control characters (0x00-0x1F) with escaped versions
-    return jsonString.replace(/[\x00-\x1F]/g, (char) => {
-      const code = char.charCodeAt(0);
-      return `\\u${code.toString(16).padStart(4, '0')}`;
-    });
+    // Strip control characters (0x00-0x1F) that are invalid in raw JSON strings.
+    // Stripping is preferable to escaping: escaping preserves them as actual
+    // Unicode control chars in parsed string values, which browsers render as
+    // replacement characters (garbled text). Stripping removes the artifacts.
+    return jsonString.replace(/[\x00-\x1F]/g, '');
   }
 
   /**
