@@ -1,5 +1,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import ScheduleService from '../../services/ScheduleService.js';
+import httpRequestAgent from '../../utils/HttpRequestAgent.js';
+import { API_CONFIG } from '../../config/apiConfig.js';
 
 export const fetchSystemInfo = createAsyncThunk(
   'settings/fetchSystemInfo',
@@ -21,6 +23,22 @@ export const factoryReset = createAsyncThunk(
   async () => ScheduleService.factoryReset()
 );
 
+export const scanWifiNetworks = createAsyncThunk(
+  'settings/scanWifiNetworks',
+  async () => {
+    const data = await httpRequestAgent.get(API_CONFIG.ENDPOINTS.WIFI_NETWORKS);
+    return data.networks;
+  }
+);
+
+export const saveWifiCredentials = createAsyncThunk(
+  'settings/saveWifiCredentials',
+  async ({ ssid, password }) => {
+    const data = await httpRequestAgent.post(API_CONFIG.ENDPOINTS.WIFI_CONFIG, { ssid, password });
+    return data;
+  }
+);
+
 const settingsSlice = createSlice({
   name: 'settings',
   initialState: {
@@ -31,6 +49,9 @@ const settingsSlice = createSlice({
     resetting: false,
     error: null,
     actionSuccess: null,
+    wifiNetworks: [],
+    wifiScanning: false,
+    wifiSaving: false,
   },
   reducers: {
     clearError: (state) => { state.error = null; },
@@ -73,6 +94,29 @@ const settingsSlice = createSlice({
       })
       .addCase(factoryReset.rejected, (state, { error }) => {
         state.resetting = false;
+        state.error = error.message;
+      })
+      .addCase(scanWifiNetworks.pending, (state) => {
+        state.wifiScanning = true;
+      })
+      .addCase(scanWifiNetworks.fulfilled, (state, { payload }) => {
+        state.wifiScanning = false;
+        state.wifiNetworks = payload;
+      })
+      .addCase(scanWifiNetworks.rejected, (state, { error }) => {
+        state.wifiScanning = false;
+        state.error = error.message;
+      })
+      .addCase(saveWifiCredentials.pending, (state) => {
+        state.wifiSaving = true;
+      })
+      .addCase(saveWifiCredentials.fulfilled, (state) => {
+        state.wifiSaving = false;
+        state.rebooting = true;
+        state.actionSuccess = 'WiFi credentials saved. Device is restarting…';
+      })
+      .addCase(saveWifiCredentials.rejected, (state, { error }) => {
+        state.wifiSaving = false;
         state.error = error.message;
       });
   },

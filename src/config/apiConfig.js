@@ -29,6 +29,7 @@ export const API_CONFIG = {
     SCHEDULE_BELLS: '/api/schedule/bells',
     SCHEDULE_HOLIDAYS: '/api/schedule/holidays',
     SCHEDULE_EXCEPTIONS: '/api/schedule/exceptions',
+    SCHEDULE_TEMPLATES: '/api/schedule/templates',
     BELL_STATUS: '/api/bell/status',
     BELL_PANIC: '/api/bell/panic',
     BELL_TEST: '/api/bell/test',

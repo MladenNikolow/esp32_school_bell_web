@@ -3,20 +3,21 @@ import { useSelector, useDispatch } from 'react-redux';
 import {
   fetchHolidays, saveHolidays,
   fetchExceptions, saveExceptions,
-  setHolidays, setExceptionWorking, setExceptionHoliday,
+  fetchTemplates,
+  setHolidays, setExceptions, setCustomBellSets,
   clearError, clearSaveSuccess,
 } from './CalendarSlice.js';
 import { fetchBells } from '../Schedule/ScheduleSlice.js';
 import BellScheduleEditor from '../Schedule/BellScheduleEditor.jsx';
 import useLocale from '../../hooks/useLocale.jsx';
 
-const SUB_TABS = ['holidays', 'exceptionWorking', 'exceptionHoliday'];
-const SCHEDULE_TYPE_VALUES = ['default', 'reduced', 'custom'];
+const SUB_TABS = ['holidays', 'exceptions'];
+const ACTION_VALUES = ['day-off', 'normal', 'first-shift', 'second-shift', 'template', 'custom'];
 
 export default function CalendarPage() {
   const dispatch = useDispatch();
   const { t } = useLocale();
-  const { holidays, exceptionWorking, exceptionHoliday, loading, saving, error, saveSuccess } =
+  const { holidays, exceptions, customBellSets, templates, loading, saving, error, saveSuccess } =
     useSelector((s) => s.calendar);
   const { firstShift, secondShift } = useSelector((s) => s.schedule);
   const [subTab, setSubTab] = useState('holidays');
@@ -30,6 +31,7 @@ export default function CalendarPage() {
   useEffect(() => {
     dispatch(fetchHolidays());
     dispatch(fetchExceptions());
+    dispatch(fetchTemplates());
     dispatch(fetchBells());
   }, [dispatch]);
 
@@ -53,106 +55,106 @@ export default function CalendarPage() {
   };
   const handleSaveHolidays = () => dispatch(saveHolidays(holidays));
 
-  // Exception working handlers
-  const addExWorking = () => {
+  // Exception handlers
+  const addException = (overrides = {}) => {
     const today = new Date().toISOString().slice(0, 10);
-    dispatch(setExceptionWorking([...exceptionWorking, { date: today, label: '', scheduleType: 'default' }]));
+    dispatch(setExceptions([...exceptions, {
+      startDate: today,
+      endDate: '',
+      label: '',
+      action: 'day-off',
+      timeOffsetMin: 0,
+      templateIdx: 0,
+      customBellsIdx: -1,
+      ...overrides,
+    }]));
   };
-  const updateExWorking = (idx, field, value) => {
-    dispatch(setExceptionWorking(exceptionWorking.map((e, i) => {
+
+  const updateException = (idx, field, value) => {
+    dispatch(setExceptions(exceptions.map((e, i) => {
       if (i !== idx) return e;
       const updated = { ...e, [field]: value };
-      if (field === 'scheduleType') {
-        if (value === 'default') {
-          delete updated.customBells;
-        } else if (value === 'reduced') {
-          const cfg = reducedConfig[i] || getReducedDefaults();
-          const count = Math.min(4, defaultBells.length || 4);
-          if (!reducedConfig[i]) {
-            setReducedConfig(prev => ({ ...prev, [i]: { ...cfg, classCount: count } }));
-          }
-          updated.customBells = generateReducedBells(cfg, count);
-        }
+      // Reset dependent fields on action change
+      if (field === 'action') {
+        if (value !== 'custom') updated.customBellsIdx = -1;
+        if (value !== 'template') updated.templateIdx = 0;
       }
       return updated;
     })));
   };
-  const updateReducedClassCount = (idx, count) => {
-    const maxCount = defaultBells.length || 20;
-    const clamped = Math.max(1, Math.min(count, maxCount));
-    const cfg = reducedConfig[idx] || getReducedDefaults();
-    const newCfg = { ...cfg, classCount: clamped };
-    setReducedConfig(prev => ({ ...prev, [idx]: newCfg }));
-    dispatch(setExceptionWorking(exceptionWorking.map((e, i) =>
-      i === idx ? { ...e, customBells: generateReducedBells(newCfg, clamped) } : e
-    )));
-  };
-  const updateReducedDuration = (idx, field, value) => {
-    const cfg = reducedConfig[idx] || getReducedDefaults();
-    const newCfg = { ...cfg, [field]: value };
-    const count = newCfg.classCount || (exceptionWorking[idx]?.customBells || []).length || 4;
-    newCfg.classCount = count;
-    setReducedConfig(prev => ({ ...prev, [idx]: newCfg }));
-    dispatch(setExceptionWorking(exceptionWorking.map((e, i) =>
-      i === idx ? { ...e, customBells: generateReducedBells(newCfg, count) } : e
-    )));
-  };
-  const updateExWorkingBells = (idx, bells) => {
-    dispatch(setExceptionWorking(exceptionWorking.map((e, i) =>
-      i === idx ? { ...e, customBells: bells } : e
-    )));
-  };
-  const removeExWorking = (idx) => {
-    dispatch(setExceptionWorking(exceptionWorking.filter((_, i) => i !== idx)));
-  };
-  const [expandedExWork, setExpandedExWork] = useState({});
-  const [reducedConfig, setReducedConfig] = useState({});
 
-  const getReducedDefaults = () => ({
-    classDuration: 30,
-    breakDuration: 5,
-    bigBreakDuration: 10,
-    bigBreakAfterClass: 3,
-    bellDuration: defaultBells.length > 0 ? defaultBells[0].durationSec : 3,
-  });
-
-  const generateReducedBells = (config, classCount) => {
-    const startTime = defaultBells.length > 0
-      ? defaultBells[0].hour * 60 + defaultBells[0].minute
-      : 8 * 60;
-    const generated = [];
-    let totalMinutes = startTime;
-    for (let i = 0; i < classCount; i++) {
-      generated.push({
-        hour: Math.floor(totalMinutes / 60) % 24,
-        minute: totalMinutes % 60,
-        durationSec: config.bellDuration,
-        label: t('auto.period', { n: i + 1 }),
-      });
-      const breakAfter = (i + 1 === config.bigBreakAfterClass)
-        ? config.bigBreakDuration
-        : config.breakDuration;
-      totalMinutes += config.classDuration + breakAfter;
+  const removeException = (idx) => {
+    const ex = exceptions[idx];
+    const newExceptions = exceptions.filter((_, i) => i !== idx);
+    // If removed exception referenced a custom bell set, check if still used
+    if (ex.customBellsIdx >= 0) {
+      const stillUsed = newExceptions.some(e => e.customBellsIdx === ex.customBellsIdx);
+      if (!stillUsed) {
+        // Remove the custom bell set and remap indices
+        const removedIdx = ex.customBellsIdx;
+        const newSets = customBellSets.filter((_, i) => i !== removedIdx);
+        dispatch(setCustomBellSets(newSets));
+        dispatch(setExceptions(newExceptions.map(e => ({
+          ...e,
+          customBellsIdx: e.customBellsIdx > removedIdx
+            ? e.customBellsIdx - 1
+            : e.customBellsIdx,
+        }))));
+        return;
+      }
     }
-    return generated;
+    dispatch(setExceptions(newExceptions));
   };
 
-  // Exception holiday handlers
-  const addExHoliday = () => {
-    const today = new Date().toISOString().slice(0, 10);
-    dispatch(setExceptionHoliday([...exceptionHoliday, { date: today, label: '' }]));
+  const updateExceptionBells = (idx, bells) => {
+    const ex = exceptions[idx];
+    if (ex.customBellsIdx >= 0 && ex.customBellsIdx < customBellSets.length) {
+      // Update existing custom bell set
+      dispatch(setCustomBellSets(customBellSets.map((s, i) =>
+        i === ex.customBellsIdx ? { bells } : s
+      )));
+    } else {
+      // Create new custom bell set
+      const newIdx = customBellSets.length;
+      dispatch(setCustomBellSets([...customBellSets, { bells }]));
+      dispatch(setExceptions(exceptions.map((e, i) =>
+        i === idx ? { ...e, customBellsIdx: newIdx } : e
+      )));
+    }
   };
-  const updateExHoliday = (idx, field, value) => {
-    dispatch(setExceptionHoliday(exceptionHoliday.map((e, i) => (i === idx ? { ...e, [field]: value } : e))));
+
+  const [expandedEx, setExpandedEx] = useState({});
+
+  // Quick actions
+  const getDateStr = (offsetDays) => {
+    const d = new Date();
+    d.setDate(d.getDate() + offsetDays);
+    return d.toISOString().slice(0, 10);
   };
-  const removeExHoliday = (idx) => {
-    dispatch(setExceptionHoliday(exceptionHoliday.filter((_, i) => i !== idx)));
+  const getNextSaturday = () => {
+    const d = new Date();
+    const day = d.getDay();
+    d.setDate(d.getDate() + (6 - day + (day === 6 ? 7 : 0)));
+    return d.toISOString().slice(0, 10);
+  };
+
+  const quickAction = (label, overrides) => {
+    // Check if an exception already exists for the same date
+    const date = overrides.startDate;
+    if (exceptions.some(e => e.startDate === date && !e.endDate)) {
+      return; // Already exists
+    }
+    addException({ label, ...overrides });
   };
 
   const handleSaveExceptions = () =>
-    dispatch(saveExceptions({ exceptionWorking, exceptionHoliday }));
+    dispatch(saveExceptions({ exceptions, customBellSets }));
 
-  if (loading && holidays.length === 0 && exceptionWorking.length === 0) {
+  // Get bells for a custom bell set index
+  const getCustomBells = (idx) =>
+    (idx >= 0 && idx < customBellSets.length) ? customBellSets[idx].bells || [] : [];
+
+  if (loading && holidays.length === 0 && exceptions.length === 0) {
     return <div className="calendar-page"><div className="loading-text">{t('calendar.loading')}</div></div>;
   }
 
@@ -220,46 +222,119 @@ export default function CalendarPage() {
         </div>
       )}
 
-      {/* Exception Working Tab */}
-      {subTab === 'exceptionWorking' && (
+      {/* Unified Exceptions Tab */}
+      {subTab === 'exceptions' && (
         <div className="sched-card">
-          <h3>{t('calendar.exceptionWorkingTitle')}</h3>
-          <p className="card-desc">{t('calendar.exceptionWorkingDesc')}</p>
+          <h3>{t('calendar.exceptionsTitle')}</h3>
+          <p className="card-desc">{t('calendar.exceptionsDesc')}</p>
+
+          {/* Quick Actions */}
+          <div className="quick-actions">
+            <span className="quick-actions-label">{t('calendar.quickActions')}</span>
+            <button className="quick-action-btn quick-action-off"
+              onClick={() => quickAction(t('calendar.qa_todayOff'), { startDate: getDateStr(0), action: 'day-off' })}>
+              {t('calendar.qa_todayOff')}
+            </button>
+            <button className="quick-action-btn quick-action-off"
+              onClick={() => quickAction(t('calendar.qa_tomorrowOff'), { startDate: getDateStr(1), action: 'day-off' })}>
+              {t('calendar.qa_tomorrowOff')}
+            </button>
+            <button className="quick-action-btn quick-action-short"
+              onClick={() => quickAction(t('calendar.qa_shortToday'), { startDate: getDateStr(0), action: 'first-shift' })}>
+              {t('calendar.qa_shortToday')}
+            </button>
+            <button className="quick-action-btn quick-action-short"
+              onClick={() => quickAction(t('calendar.qa_shortTomorrow'), { startDate: getDateStr(1), action: 'first-shift' })}>
+              {t('calendar.qa_shortTomorrow')}
+            </button>
+            <button className="quick-action-btn quick-action-work"
+              onClick={() => quickAction(t('calendar.qa_saturdayWorking'), { startDate: getNextSaturday(), action: 'normal' })}>
+              {t('calendar.qa_saturdayWorking')}
+            </button>
+          </div>
+
           <p className="card-desc card-desc-note">{t('calendar.expiredNote')}</p>
-          {exceptionWorking.length === 0 ? (
-            <p className="empty-text">{t('calendar.noExceptionWorking')}</p>
+          {exceptions.length === 0 ? (
+            <p className="empty-text">{t('calendar.noExceptions')}</p>
           ) : (
-            exceptionWorking.map((e, i) => (
-              <div key={i} className="cal-entry cal-entry-exwork cal-entry-expandable">
+            exceptions.map((e, i) => (
+              <div key={i} className={`cal-entry cal-entry-expandable ${e.action === 'day-off' ? 'cal-entry-exhol' : 'cal-entry-exwork'}`}>
                 <div className="cal-entry-number">{i + 1}</div>
                 <div className="cal-entry-body">
                   <div className="cal-entry-fields">
                     <div className="date-field-group">
-                      <label className="date-field-label">{t('calendar.date')}</label>
-                      <input type="date" className="date-picker" value={e.date} onChange={(ev) => updateExWorking(i, 'date', ev.target.value)} />
+                      <label className="date-field-label">{t('calendar.startDate')}</label>
+                      <input type="date" className="date-picker" value={e.startDate}
+                        onChange={(ev) => updateException(i, 'startDate', ev.target.value)} />
+                    </div>
+                    <div className="date-field-group">
+                      <label className="date-field-label">{t('calendar.endDateOpt')}</label>
+                      <input type="date" className="date-picker" value={e.endDate || ''}
+                        onChange={(ev) => updateException(i, 'endDate', ev.target.value)} />
                     </div>
                     <div className="date-field-group date-field-label-group">
                       <label className="date-field-label">{t('calendar.label')}</label>
-                      <input className="date-label-input" value={e.label || ''} onChange={(ev) => updateExWorking(i, 'label', ev.target.value)} placeholder={t('calendar.exWorkPlaceholder')} maxLength={47} />
+                      <input className="date-label-input" value={e.label || ''}
+                        onChange={(ev) => updateException(i, 'label', ev.target.value)}
+                        placeholder={e.action === 'day-off' ? t('calendar.exHolPlaceholder') : t('calendar.exWorkPlaceholder')}
+                        maxLength={47} />
                     </div>
                     <div className="date-field-group">
-                      <label className="date-field-label">{t('calendar.schedule')}</label>
+                      <label className="date-field-label">{t('calendar.action')}</label>
                       <select
                         className="schedule-type-select"
-                        value={e.scheduleType || 'default'}
-                        onChange={(ev) => updateExWorking(i, 'scheduleType', ev.target.value)}
+                        value={e.action}
+                        onChange={(ev) => updateException(i, 'action', ev.target.value)}
                       >
-                        {SCHEDULE_TYPE_VALUES.map((sv) => (
-                          <option key={sv} value={sv}>{t(`calendar.schedule${sv.charAt(0).toUpperCase() + sv.slice(1)}`)}</option>
+                        {ACTION_VALUES.map((av) => (
+                          <option key={av} value={av}>{t(`calendar.action_${av}`)}</option>
                         ))}
                       </select>
                     </div>
                   </div>
                   <div className="schedule-type-desc">
-                    {t(`calendar.schedule${(e.scheduleType || 'default').charAt(0).toUpperCase() + (e.scheduleType || 'default').slice(1)}Desc`)}
+                    {t(`calendar.action_${e.action}_desc`)}
                   </div>
-                  {/* Default schedule: show read-only preview of bells that will ring */}
-                  {(e.scheduleType === 'default' || !e.scheduleType) && defaultBells.length > 0 && (
+
+                  {/* Time offset for normal/first-shift/second-shift */}
+                  {['normal', 'first-shift', 'second-shift'].includes(e.action) && (
+                    <div className="time-offset-row">
+                      <label>{t('calendar.timeOffset')}</label>
+                      <input type="number" className="time-offset-input"
+                        min="-120" max="120" value={e.timeOffsetMin || 0}
+                        onChange={(ev) => updateException(i, 'timeOffsetMin', parseInt(ev.target.value) || 0)} />
+                      <span className="time-offset-unit">{t('calendar.min')}</span>
+                    </div>
+                  )}
+
+                  {/* Template selector */}
+                  {e.action === 'template' && (
+                    <div className="template-select-row">
+                      <label>{t('calendar.selectTemplate')}</label>
+                      <select className="template-select"
+                        value={e.templateIdx || 0}
+                        onChange={(ev) => updateException(i, 'templateIdx', parseInt(ev.target.value))}>
+                        {templates.length === 0
+                          ? <option value={0}>{t('calendar.noTemplates')}</option>
+                          : templates.map((tpl, ti) => (
+                              <option key={ti} value={ti}>{tpl.name || `Template ${ti + 1}`}</option>
+                            ))
+                        }
+                      </select>
+                      {templates.length > 0 && templates[e.templateIdx || 0] && (
+                        <div className="template-bells-preview">
+                          {(templates[e.templateIdx || 0].bells || []).map((b, j) => (
+                            <span key={j} className="preview-bell-chip">
+                              {String(b.hour).padStart(2, '0')}:{String(b.minute).padStart(2, '0')}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Normal schedule: show read-only preview of bells that will ring */}
+                  {e.action === 'normal' && defaultBells.length > 0 && (
                     <div className="default-bells-preview">
                       <span className="preview-summary">{t('calendar.bellsFromNormal', { count: defaultBells.length })}</span>
                       <span className="preview-times">
@@ -271,157 +346,60 @@ export default function CalendarPage() {
                       </span>
                     </div>
                   )}
-                  {/* Reduced classes: class count picker + preview */}
-                  {e.scheduleType === 'reduced' && (() => {
-                    const cfg = reducedConfig[i] || getReducedDefaults();
-                    const classCount = (e.customBells || []).length || Math.min(4, defaultBells.length || 4);
-                    return (
-                    <div className="reduced-classes-section">
-                        <>
-                          <div className="reduced-count-row">
-                            <label>{t('calendar.numClasses')}</label>
-                            <input
-                              type="number"
-                              className="reduced-count-input"
-                              min="1"
-                              max={defaultBells.length || 20}
-                              value={classCount}
-                              onChange={(ev) => updateReducedClassCount(i, parseInt(ev.target.value) || 1)}
-                            />
-                            {defaultBells.length > 0 && <span className="reduced-count-hint">{t('calendar.ofTotal', { total: defaultBells.length })}</span>}
-                          </div>
-                          <div className="reduced-duration-row">
-                            <div className="reduced-duration-field">
-                              <label>{t('calendar.classDuration')}</label>
-                              <div className="reduced-duration-input-wrap">
-                                <input
-                                  type="number"
-                                  className="reduced-duration-input"
-                                  min="5"
-                                  max="90"
-                                  value={cfg.classDuration}
-                                  onChange={(ev) => updateReducedDuration(i, 'classDuration', parseInt(ev.target.value) || 30)}
-                                />
-                                <span className="reduced-duration-unit">{t('calendar.min')}</span>
-                              </div>
-                            </div>
-                            <div className="reduced-duration-field">
-                              <label>{t('calendar.break')}</label>
-                              <div className="reduced-duration-input-wrap">
-                                <input
-                                  type="number"
-                                  className="reduced-duration-input"
-                                  min="0"
-                                  max="30"
-                                  value={cfg.breakDuration}
-                                  onChange={(ev) => updateReducedDuration(i, 'breakDuration', parseInt(ev.target.value) || 0)}
-                                />
-                                <span className="reduced-duration-unit">{t('calendar.min')}</span>
-                              </div>
-                            </div>
-                            <div className="reduced-duration-field">
-                              <label>{t('calendar.bigBreak')}</label>
-                              <div className="reduced-duration-input-wrap">
-                                <input
-                                  type="number"
-                                  className="reduced-duration-input"
-                                  min="0"
-                                  max="45"
-                                  value={cfg.bigBreakDuration}
-                                  onChange={(ev) => updateReducedDuration(i, 'bigBreakDuration', parseInt(ev.target.value) || 0)}
-                                />
-                                <span className="reduced-duration-unit">{t('calendar.min')}</span>
-                              </div>
-                            </div>
-                            <div className="reduced-duration-field">
-                              <label>{t('calendar.bigBreakAfter')}</label>
-                              <div className="reduced-duration-input-wrap">
-                                <input
-                                  type="number"
-                                  className="reduced-duration-input"
-                                  min="1"
-                                  max={classCount}
-                                  value={Math.min(cfg.bigBreakAfterClass, classCount)}
-                                  onChange={(ev) => updateReducedDuration(i, 'bigBreakAfterClass', parseInt(ev.target.value) || 1)}
-                                />
-                                <span className="reduced-duration-unit">{t('calendar.class')}</span>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="reduced-bells-preview">
-                            {(e.customBells || []).map((b, j) => (
-                              <span key={j} className="preview-bell-chip">
-                                {String(b.hour).padStart(2, '0')}:{String(b.minute).padStart(2, '0')}
-                                {b.label ? ` ${b.label}` : ''}
-                              </span>
-                            ))}
-                          </div>
-                        </>
+
+                  {/* First shift only preview */}
+                  {e.action === 'first-shift' && firstShift.enabled && (
+                    <div className="default-bells-preview">
+                      <span className="preview-summary">{t('calendar.bellsFromShift', { shift: t('calendar.firstShift'), count: firstShift.bells.length })}</span>
+                      <span className="preview-times">
+                        {firstShift.bells.map((b, j) => (
+                          <span key={j} className="preview-bell-chip">
+                            {String(b.hour).padStart(2, '0')}:{String(b.minute).padStart(2, '0')}
+                          </span>
+                        ))}
+                      </span>
                     </div>
-                    );
-                  })()}
+                  )}
+
+                  {/* Second shift only preview */}
+                  {e.action === 'second-shift' && secondShift.enabled && (
+                    <div className="default-bells-preview">
+                      <span className="preview-summary">{t('calendar.bellsFromShift', { shift: t('calendar.secondShift'), count: secondShift.bells.length })}</span>
+                      <span className="preview-times">
+                        {secondShift.bells.map((b, j) => (
+                          <span key={j} className="preview-bell-chip">
+                            {String(b.hour).padStart(2, '0')}:{String(b.minute).padStart(2, '0')}
+                          </span>
+                        ))}
+                      </span>
+                    </div>
+                  )}
+
                   {/* Custom schedule: full bell editor */}
-                  {e.scheduleType === 'custom' && (
+                  {e.action === 'custom' && (
                     <div className="exception-schedule-section">
                       <button
                         className="expand-schedule-btn"
-                        onClick={() => setExpandedExWork(prev => ({ ...prev, [i]: !prev[i] }))}
+                        onClick={() => setExpandedEx(prev => ({ ...prev, [i]: !prev[i] }))}
                       >
-                        {expandedExWork[i] ? '▼' : '▶'} {t('calendar.customBells', { count: (e.customBells || []).length })}
+                        {expandedEx[i] ? '▼' : '▶'} {t('calendar.customBells', { count: getCustomBells(e.customBellsIdx).length })}
                       </button>
-                      {expandedExWork[i] && (
+                      {expandedEx[i] && (
                         <BellScheduleEditor
-                          bells={e.customBells || []}
-                          onChangeBells={(bells) => updateExWorkingBells(i, bells)}
+                          bells={getCustomBells(e.customBellsIdx)}
+                          onChangeBells={(bells) => updateExceptionBells(i, bells)}
                           compact
                         />
                       )}
                     </div>
                   )}
                 </div>
-                <button className="delete-btn" onClick={() => removeExWorking(i)} title={t('calendar.removeException')}>×</button>
+                <button className="delete-btn" onClick={() => removeException(i)} title={t('calendar.removeException')}>×</button>
               </div>
             ))
           )}
           <div className="cal-actions">
-            <button className="add-btn" onClick={addExWorking}>{t('calendar.addExWorking')}</button>
-            <button className="save-button" onClick={handleSaveExceptions} disabled={saving}>
-              {saving ? t('calendar.saving') : t('calendar.saveExceptions')}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Exception Holiday Tab */}
-      {subTab === 'exceptionHoliday' && (
-        <div className="sched-card">
-          <h3>{t('calendar.exceptionHolidayTitle')}</h3>
-          <p className="card-desc">{t('calendar.exceptionHolidayDesc')}</p>
-          <p className="card-desc card-desc-note">{t('calendar.expiredNote')}</p>
-          {exceptionHoliday.length === 0 ? (
-            <p className="empty-text">{t('calendar.noExceptionHoliday')}</p>
-          ) : (
-            exceptionHoliday.map((e, i) => (
-              <div key={i} className="cal-entry cal-entry-exhol">
-                <div className="cal-entry-number">{i + 1}</div>
-                <div className="cal-entry-body">
-                  <div className="cal-entry-fields">
-                    <div className="date-field-group">
-                      <label className="date-field-label">{t('calendar.date')}</label>
-                      <input type="date" className="date-picker" value={e.date} onChange={(ev) => updateExHoliday(i, 'date', ev.target.value)} />
-                    </div>
-                    <div className="date-field-group date-field-label-group">
-                      <label className="date-field-label">{t('calendar.label')}</label>
-                      <input className="date-label-input" value={e.label || ''} onChange={(ev) => updateExHoliday(i, 'label', ev.target.value)} placeholder={t('calendar.exHolPlaceholder')} maxLength={47} />
-                    </div>
-                  </div>
-                </div>
-                <button className="delete-btn" onClick={() => removeExHoliday(i)} title={t('calendar.removeException')}>×</button>
-              </div>
-            ))
-          )}
-          <div className="cal-actions">
-            <button className="add-btn" onClick={addExHoliday}>{t('calendar.addExHoliday')}</button>
+            <button className="add-btn" onClick={() => addException()}>{t('calendar.addException')}</button>
             <button className="save-button" onClick={handleSaveExceptions} disabled={saving}>
               {saving ? t('calendar.saving') : t('calendar.saveExceptions')}
             </button>

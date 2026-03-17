@@ -32,6 +32,13 @@ const ScheduleService = {
   saveExceptions: (data, signal) =>
     agent.post(API_CONFIG.ENDPOINTS.SCHEDULE_EXCEPTIONS, data, signal),
 
+  // Templates
+  getTemplates: (signal) =>
+    agent.get(API_CONFIG.ENDPOINTS.SCHEDULE_TEMPLATES, signal),
+
+  saveTemplates: (data, signal) =>
+    agent.post(API_CONFIG.ENDPOINTS.SCHEDULE_TEMPLATES, data, signal),
+
   // Bell status & panic
   getBellStatus: (signal) =>
     agent.get(API_CONFIG.ENDPOINTS.BELL_STATUS, signal),

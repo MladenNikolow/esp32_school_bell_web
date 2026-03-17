@@ -4,17 +4,16 @@ import { useSelector, useDispatch } from 'react-redux';
 import {
   fetchSettings,
   fetchBells,
-  fetchHolidays,
-  fetchExceptions,
+  clearError,
+} from '../ScheduleSlice.js';
+import {
   fetchBellStatus,
   fetchSystemTime,
-  clearScheduleError,
-} from '../ScheduleSlice.js';
+} from '../../Dashboard/DashboardSlice.js';
 import BellStatusPanel from './BellStatusPanel.jsx';
 import SettingsEditor from './SettingsEditor.jsx';
 import BellTimesEditor from './BellTimesEditor.jsx';
 import HolidaysEditor from './HolidaysEditor.jsx';
-import ExceptionsEditor from './ExceptionsEditor.jsx';
 
 const STATUS_POLL_MS = 5000;
 
@@ -27,8 +26,6 @@ export default function ScheduleDashboard() {
   useEffect(() => {
     dispatch(fetchSettings());
     dispatch(fetchBells());
-    dispatch(fetchHolidays());
-    dispatch(fetchExceptions());
     dispatch(fetchBellStatus());
     dispatch(fetchSystemTime());
   }, [dispatch]);
@@ -47,7 +44,7 @@ export default function ScheduleDashboard() {
       {error && (
         <div className="schedule-error">
           <span>{error}</span>
-          <button onClick={() => dispatch(clearScheduleError())}>Dismiss</button>
+          <button onClick={() => dispatch(clearError())}>Dismiss</button>
         </div>
       )}
 
@@ -59,7 +56,6 @@ export default function ScheduleDashboard() {
         <SettingsEditor />
         <BellTimesEditor />
         <HolidaysEditor />
-        <ExceptionsEditor />
       </div>
     </div>
   );

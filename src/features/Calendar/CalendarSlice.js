@@ -27,12 +27,26 @@ export const saveExceptions = createAsyncThunk(
   }
 );
 
+export const fetchTemplates = createAsyncThunk(
+  'calendar/fetchTemplates',
+  async (_, { signal }) => ScheduleService.getTemplates(signal)
+);
+
+export const saveTemplates = createAsyncThunk(
+  'calendar/saveTemplates',
+  async (data) => {
+    await ScheduleService.saveTemplates(data);
+    return data;
+  }
+);
+
 const calendarSlice = createSlice({
   name: 'calendar',
   initialState: {
     holidays: [],
-    exceptionWorking: [],
-    exceptionHoliday: [],
+    exceptions: [],
+    customBellSets: [],
+    templates: [],
     loading: false,
     saving: false,
     error: null,
@@ -42,8 +56,9 @@ const calendarSlice = createSlice({
     clearError: (state) => { state.error = null; },
     clearSaveSuccess: (state) => { state.saveSuccess = false; },
     setHolidays: (state, { payload }) => { state.holidays = payload; },
-    setExceptionWorking: (state, { payload }) => { state.exceptionWorking = payload; },
-    setExceptionHoliday: (state, { payload }) => { state.exceptionHoliday = payload; },
+    setExceptions: (state, { payload }) => { state.exceptions = payload; },
+    setCustomBellSets: (state, { payload }) => { state.customBellSets = payload; },
+    setTemplates: (state, { payload }) => { state.templates = payload; },
   },
   extraReducers: (builder) => {
     builder
@@ -70,8 +85,8 @@ const calendarSlice = createSlice({
       .addCase(fetchExceptions.fulfilled, (state, { payload }) => {
         state.loading = false;
         state.error = null;
-        state.exceptionWorking = payload.exceptionWorking || [];
-        state.exceptionHoliday = payload.exceptionHoliday || [];
+        state.exceptions = payload.exceptions || [];
+        state.customBellSets = payload.customBellSets || [];
       })
       .addCase(fetchExceptions.rejected, (state, { error }) => {
         state.loading = false;
@@ -85,9 +100,28 @@ const calendarSlice = createSlice({
       .addCase(saveExceptions.rejected, (state, { error }) => {
         state.saving = false;
         state.error = error.message;
+      })
+      .addCase(fetchTemplates.pending, (state) => { state.loading = true; })
+      .addCase(fetchTemplates.fulfilled, (state, { payload }) => {
+        state.loading = false;
+        state.error = null;
+        state.templates = payload.templates || [];
+      })
+      .addCase(fetchTemplates.rejected, (state, { error }) => {
+        state.loading = false;
+        if (error.name !== 'AbortError') state.error = error.message;
+      })
+      .addCase(saveTemplates.pending, (state) => { state.saving = true; state.saveSuccess = false; })
+      .addCase(saveTemplates.fulfilled, (state) => {
+        state.saving = false;
+        state.saveSuccess = true;
+      })
+      .addCase(saveTemplates.rejected, (state, { error }) => {
+        state.saving = false;
+        state.error = error.message;
       });
   },
 });
 
-export const { clearError, clearSaveSuccess, setHolidays, setExceptionWorking, setExceptionHoliday } = calendarSlice.actions;
+export const { clearError, clearSaveSuccess, setHolidays, setExceptions, setCustomBellSets, setTemplates } = calendarSlice.actions;
 export default calendarSlice.reducer;
