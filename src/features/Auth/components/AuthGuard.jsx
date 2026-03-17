@@ -10,6 +10,7 @@ import CalendarPage from '../../Calendar/CalendarPage.jsx';
 import SettingsPage from '../../Settings/SettingsPage.jsx';
 import RingyLogo from '../../../components/RingyLogo.jsx';
 import useTheme from '../../../hooks/useTheme.js';
+import useLocale from '../../../hooks/useLocale.jsx';
 
 const PAGES = {
   dashboard: DashboardPage,
@@ -27,6 +28,7 @@ export default function AuthGuard() {
   const { isAuthenticated, isInitializing, user } = useSelector((state) => state.auth);
   const [activeTab, setActiveTab] = useState('dashboard');
   const { theme, toggleTheme } = useTheme();
+  const { t, locale, setLocale, toggleLocale } = useLocale();
 
   // Initialize authentication on component mount
   useEffect(() => {
@@ -42,7 +44,7 @@ export default function AuthGuard() {
         <div className="loading-container">
           <div className="loading-spinner"></div>
           <div className="loading-text">
-            Initializing ESP32 Connection...
+            {t('auth.initConnection')}
           </div>
         </div>
       </div>
@@ -59,11 +61,27 @@ export default function AuthGuard() {
         <div className="header-content">
           <RingyLogo height="48px" onClick={() => setActiveTab('dashboard')} />
           <div className="user-info">
-            {user && <span className="welcome-text">Hi, {user.username || 'Admin'}</span>}
-            <button className="theme-toggle" onClick={toggleTheme} title="Toggle dark mode">
-              {theme === 'dark' ? '☀️' : '🌙'}
-            </button>
-            <button className="logout-button" onClick={() => dispatch(logoutUser())}>Logout</button>
+            {user && <span className="welcome-text">{t('auth.welcome', { name: user.username || 'Admin' })}</span>}
+            <div className="header-toggles">
+              <div className="lang-switcher" role="radiogroup" aria-label={t('lang.title')}>
+                <button
+                  className={`lang-switcher-btn${locale === 'bg' ? ' active' : ''}`}
+                  onClick={() => setLocale('bg')}
+                  aria-checked={locale === 'bg'}
+                  role="radio"
+                >BG</button>
+                <button
+                  className={`lang-switcher-btn${locale === 'en' ? ' active' : ''}`}
+                  onClick={() => setLocale('en')}
+                  aria-checked={locale === 'en'}
+                  role="radio"
+                >EN</button>
+              </div>
+              <button className="theme-toggle" onClick={toggleTheme} title={t('auth.toggleDarkMode')}>
+                {theme === 'dark' ? '☀️' : '🌙'}
+              </button>
+            </div>
+            <button className="logout-button" onClick={() => dispatch(logoutUser())}>{t('auth.logout')}</button>
           </div>
         </div>
         <Navigation activeTab={activeTab} onTabChange={setActiveTab} />

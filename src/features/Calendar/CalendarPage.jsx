@@ -8,18 +8,14 @@ import {
 } from './CalendarSlice.js';
 import { fetchBells } from '../Schedule/ScheduleSlice.js';
 import BellScheduleEditor from '../Schedule/BellScheduleEditor.jsx';
+import useLocale from '../../hooks/useLocale.jsx';
 
 const SUB_TABS = ['holidays', 'exceptionWorking', 'exceptionHoliday'];
-const SUB_TAB_LABELS = { holidays: 'Holidays', exceptionWorking: 'Exception Working', exceptionHoliday: 'Exception Holidays' };
-
-const SCHEDULE_TYPES = [
-  { value: 'default', label: 'Use Default Schedule', desc: 'Uses the normal bell timetable for this day.' },
-  { value: 'reduced', label: 'Reduced Classes', desc: 'Uses the default schedule but with fewer classes.' },
-  { value: 'custom', label: 'Custom Schedule', desc: 'Define a completely custom bell schedule for this day.' },
-];
+const SCHEDULE_TYPE_VALUES = ['default', 'reduced', 'custom'];
 
 export default function CalendarPage() {
   const dispatch = useDispatch();
+  const { t } = useLocale();
   const { holidays, exceptionWorking, exceptionHoliday, loading, saving, error, saveSuccess } =
     useSelector((s) => s.calendar);
   const { firstShift, secondShift } = useSelector((s) => s.schedule);
@@ -39,8 +35,8 @@ export default function CalendarPage() {
 
   useEffect(() => {
     if (saveSuccess) {
-      const t = setTimeout(() => dispatch(clearSaveSuccess()), 3000);
-      return () => clearTimeout(t);
+      const timer = setTimeout(() => dispatch(clearSaveSuccess()), 3000);
+      return () => clearTimeout(timer);
     }
   }, [saveSuccess, dispatch]);
 
@@ -131,7 +127,7 @@ export default function CalendarPage() {
         hour: Math.floor(totalMinutes / 60) % 24,
         minute: totalMinutes % 60,
         durationSec: config.bellDuration,
-        label: `Period ${i + 1}`,
+        label: t('auto.period', { n: i + 1 }),
       });
       const breakAfter = (i + 1 === config.bigBreakAfterClass)
         ? config.bigBreakDuration
@@ -157,7 +153,7 @@ export default function CalendarPage() {
     dispatch(saveExceptions({ exceptionWorking, exceptionHoliday }));
 
   if (loading && holidays.length === 0 && exceptionWorking.length === 0) {
-    return <div className="calendar-page"><div className="loading-text">Loading calendar...</div></div>;
+    return <div className="calendar-page"><div className="loading-text">{t('calendar.loading')}</div></div>;
   }
 
   return (
@@ -168,17 +164,17 @@ export default function CalendarPage() {
           <button className="error-dismiss" onClick={() => dispatch(clearError())}>x</button>
         </div>
       )}
-      {saveSuccess && <div className="success-message">Saved successfully</div>}
+      {saveSuccess && <div className="success-message">{t('calendar.savedSuccess')}</div>}
 
       {/* Sub-tab nav */}
       <div className="sub-tab-nav">
-        {SUB_TABS.map((t) => (
+        {SUB_TABS.map((tab) => (
           <button
-            key={t}
-            className={`sub-tab-btn ${subTab === t ? 'active' : ''}`}
-            onClick={() => setSubTab(t)}
+            key={tab}
+            className={`sub-tab-btn ${subTab === tab ? 'active' : ''}`}
+            onClick={() => setSubTab(tab)}
           >
-            {SUB_TAB_LABELS[t]}
+            {t(`calendar.${tab}`)}
           </button>
         ))}
       </div>
@@ -186,10 +182,10 @@ export default function CalendarPage() {
       {/* Holidays Tab */}
       {subTab === 'holidays' && (
         <div className="sched-card">
-          <h3>Holiday Ranges</h3>
-          <p className="card-desc">Define date ranges when no bells should ring (vacations, breaks, etc.).</p>
+          <h3>{t('calendar.holidayRanges')}</h3>
+          <p className="card-desc">{t('calendar.holidayRangesDesc')}</p>
           {holidays.length === 0 ? (
-            <p className="empty-text">No holidays configured. Add a holiday range to get started.</p>
+            <p className="empty-text">{t('calendar.noHolidays')}</p>
           ) : (
             holidays.map((h, i) => (
               <div key={i} className="cal-entry cal-entry-holiday">
@@ -197,28 +193,28 @@ export default function CalendarPage() {
                 <div className="cal-entry-body">
                   <div className="cal-entry-fields">
                     <div className="date-field-group">
-                      <label className="date-field-label">Start Date</label>
+                      <label className="date-field-label">{t('calendar.startDate')}</label>
                       <input type="date" className="date-picker" value={h.startDate} onChange={(e) => updateHoliday(i, 'startDate', e.target.value)} />
                     </div>
                     <span className="date-range-sep">→</span>
                     <div className="date-field-group">
-                      <label className="date-field-label">End Date</label>
+                      <label className="date-field-label">{t('calendar.endDate')}</label>
                       <input type="date" className="date-picker" value={h.endDate} onChange={(e) => updateHoliday(i, 'endDate', e.target.value)} />
                     </div>
                     <div className="date-field-group date-field-label-group">
-                      <label className="date-field-label">Label</label>
-                      <input className="date-label-input" value={h.label || ''} onChange={(e) => updateHoliday(i, 'label', e.target.value)} placeholder="e.g. Summer Break" maxLength={47} />
+                      <label className="date-field-label">{t('calendar.label')}</label>
+                      <input className="date-label-input" value={h.label || ''} onChange={(e) => updateHoliday(i, 'label', e.target.value)} placeholder={t('calendar.holidayPlaceholder')} maxLength={47} />
                     </div>
                   </div>
                 </div>
-                <button className="delete-btn" onClick={() => removeHoliday(i)} title="Remove holiday">×</button>
+                <button className="delete-btn" onClick={() => removeHoliday(i)} title={t('calendar.removeHoliday')}>×</button>
               </div>
             ))
           )}
           <div className="cal-actions">
-            <button className="add-btn" onClick={addHoliday}>+ Add Holiday</button>
+            <button className="add-btn" onClick={addHoliday}>{t('calendar.addHoliday')}</button>
             <button className="save-button" onClick={handleSaveHolidays} disabled={saving}>
-              {saving ? 'Saving...' : 'Save Holidays'}
+              {saving ? t('calendar.saving') : t('calendar.saveHolidays')}
             </button>
           </div>
         </div>
@@ -227,11 +223,11 @@ export default function CalendarPage() {
       {/* Exception Working Tab */}
       {subTab === 'exceptionWorking' && (
         <div className="sched-card">
-          <h3>Exception Working Days</h3>
-          <p className="card-desc">Mark specific non-working days (weekends or holidays) as working — bells will ring on these dates. Choose schedule type: default (normal timetable), reduced classes, or custom (unique bells).</p>
-          <p className="card-desc card-desc-note">Expired exceptions are automatically removed after the day passes.</p>
+          <h3>{t('calendar.exceptionWorkingTitle')}</h3>
+          <p className="card-desc">{t('calendar.exceptionWorkingDesc')}</p>
+          <p className="card-desc card-desc-note">{t('calendar.expiredNote')}</p>
           {exceptionWorking.length === 0 ? (
-            <p className="empty-text">No exception working days configured.</p>
+            <p className="empty-text">{t('calendar.noExceptionWorking')}</p>
           ) : (
             exceptionWorking.map((e, i) => (
               <div key={i} className="cal-entry cal-entry-exwork cal-entry-expandable">
@@ -239,33 +235,33 @@ export default function CalendarPage() {
                 <div className="cal-entry-body">
                   <div className="cal-entry-fields">
                     <div className="date-field-group">
-                      <label className="date-field-label">Date</label>
+                      <label className="date-field-label">{t('calendar.date')}</label>
                       <input type="date" className="date-picker" value={e.date} onChange={(ev) => updateExWorking(i, 'date', ev.target.value)} />
                     </div>
                     <div className="date-field-group date-field-label-group">
-                      <label className="date-field-label">Label</label>
-                      <input className="date-label-input" value={e.label || ''} onChange={(ev) => updateExWorking(i, 'label', ev.target.value)} placeholder="e.g. Make-up day" maxLength={47} />
+                      <label className="date-field-label">{t('calendar.label')}</label>
+                      <input className="date-label-input" value={e.label || ''} onChange={(ev) => updateExWorking(i, 'label', ev.target.value)} placeholder={t('calendar.exWorkPlaceholder')} maxLength={47} />
                     </div>
                     <div className="date-field-group">
-                      <label className="date-field-label">Schedule</label>
+                      <label className="date-field-label">{t('calendar.schedule')}</label>
                       <select
                         className="schedule-type-select"
                         value={e.scheduleType || 'default'}
                         onChange={(ev) => updateExWorking(i, 'scheduleType', ev.target.value)}
                       >
-                        {SCHEDULE_TYPES.map((st) => (
-                          <option key={st.value} value={st.value}>{st.label}</option>
+                        {SCHEDULE_TYPE_VALUES.map((sv) => (
+                          <option key={sv} value={sv}>{t(`calendar.schedule${sv.charAt(0).toUpperCase() + sv.slice(1)}`)}</option>
                         ))}
                       </select>
                     </div>
                   </div>
                   <div className="schedule-type-desc">
-                    {SCHEDULE_TYPES.find(st => st.value === (e.scheduleType || 'default'))?.desc}
+                    {t(`calendar.schedule${(e.scheduleType || 'default').charAt(0).toUpperCase() + (e.scheduleType || 'default').slice(1)}Desc`)}
                   </div>
                   {/* Default schedule: show read-only preview of bells that will ring */}
                   {(e.scheduleType === 'default' || !e.scheduleType) && defaultBells.length > 0 && (
                     <div className="default-bells-preview">
-                      <span className="preview-summary">{defaultBells.length} bells from normal schedule</span>
+                      <span className="preview-summary">{t('calendar.bellsFromNormal', { count: defaultBells.length })}</span>
                       <span className="preview-times">
                         {defaultBells.map((b, j) => (
                           <span key={j} className="preview-bell-chip">
@@ -283,7 +279,7 @@ export default function CalendarPage() {
                     <div className="reduced-classes-section">
                         <>
                           <div className="reduced-count-row">
-                            <label>Number of classes:</label>
+                            <label>{t('calendar.numClasses')}</label>
                             <input
                               type="number"
                               className="reduced-count-input"
@@ -292,11 +288,11 @@ export default function CalendarPage() {
                               value={classCount}
                               onChange={(ev) => updateReducedClassCount(i, parseInt(ev.target.value) || 1)}
                             />
-                            {defaultBells.length > 0 && <span className="reduced-count-hint">of {defaultBells.length} total</span>}
+                            {defaultBells.length > 0 && <span className="reduced-count-hint">{t('calendar.ofTotal', { total: defaultBells.length })}</span>}
                           </div>
                           <div className="reduced-duration-row">
                             <div className="reduced-duration-field">
-                              <label>Class duration</label>
+                              <label>{t('calendar.classDuration')}</label>
                               <div className="reduced-duration-input-wrap">
                                 <input
                                   type="number"
@@ -306,11 +302,11 @@ export default function CalendarPage() {
                                   value={cfg.classDuration}
                                   onChange={(ev) => updateReducedDuration(i, 'classDuration', parseInt(ev.target.value) || 30)}
                                 />
-                                <span className="reduced-duration-unit">min</span>
+                                <span className="reduced-duration-unit">{t('calendar.min')}</span>
                               </div>
                             </div>
                             <div className="reduced-duration-field">
-                              <label>Break</label>
+                              <label>{t('calendar.break')}</label>
                               <div className="reduced-duration-input-wrap">
                                 <input
                                   type="number"
@@ -320,11 +316,11 @@ export default function CalendarPage() {
                                   value={cfg.breakDuration}
                                   onChange={(ev) => updateReducedDuration(i, 'breakDuration', parseInt(ev.target.value) || 0)}
                                 />
-                                <span className="reduced-duration-unit">min</span>
+                                <span className="reduced-duration-unit">{t('calendar.min')}</span>
                               </div>
                             </div>
                             <div className="reduced-duration-field">
-                              <label>Big break</label>
+                              <label>{t('calendar.bigBreak')}</label>
                               <div className="reduced-duration-input-wrap">
                                 <input
                                   type="number"
@@ -334,11 +330,11 @@ export default function CalendarPage() {
                                   value={cfg.bigBreakDuration}
                                   onChange={(ev) => updateReducedDuration(i, 'bigBreakDuration', parseInt(ev.target.value) || 0)}
                                 />
-                                <span className="reduced-duration-unit">min</span>
+                                <span className="reduced-duration-unit">{t('calendar.min')}</span>
                               </div>
                             </div>
                             <div className="reduced-duration-field">
-                              <label>Big break after</label>
+                              <label>{t('calendar.bigBreakAfter')}</label>
                               <div className="reduced-duration-input-wrap">
                                 <input
                                   type="number"
@@ -348,7 +344,7 @@ export default function CalendarPage() {
                                   value={Math.min(cfg.bigBreakAfterClass, classCount)}
                                   onChange={(ev) => updateReducedDuration(i, 'bigBreakAfterClass', parseInt(ev.target.value) || 1)}
                                 />
-                                <span className="reduced-duration-unit">class</span>
+                                <span className="reduced-duration-unit">{t('calendar.class')}</span>
                               </div>
                             </div>
                           </div>
@@ -371,7 +367,7 @@ export default function CalendarPage() {
                         className="expand-schedule-btn"
                         onClick={() => setExpandedExWork(prev => ({ ...prev, [i]: !prev[i] }))}
                       >
-                        {expandedExWork[i] ? '▼' : '▶'} Custom Bells ({(e.customBells || []).length} bells)
+                        {expandedExWork[i] ? '▼' : '▶'} {t('calendar.customBells', { count: (e.customBells || []).length })}
                       </button>
                       {expandedExWork[i] && (
                         <BellScheduleEditor
@@ -383,14 +379,14 @@ export default function CalendarPage() {
                     </div>
                   )}
                 </div>
-                <button className="delete-btn" onClick={() => removeExWorking(i)} title="Remove exception">×</button>
+                <button className="delete-btn" onClick={() => removeExWorking(i)} title={t('calendar.removeException')}>×</button>
               </div>
             ))
           )}
           <div className="cal-actions">
-            <button className="add-btn" onClick={addExWorking}>+ Add Exception Working</button>
+            <button className="add-btn" onClick={addExWorking}>{t('calendar.addExWorking')}</button>
             <button className="save-button" onClick={handleSaveExceptions} disabled={saving}>
-              {saving ? 'Saving...' : 'Save Exceptions'}
+              {saving ? t('calendar.saving') : t('calendar.saveExceptions')}
             </button>
           </div>
         </div>
@@ -399,11 +395,11 @@ export default function CalendarPage() {
       {/* Exception Holiday Tab */}
       {subTab === 'exceptionHoliday' && (
         <div className="sched-card">
-          <h3>Exception Holidays</h3>
-          <p className="card-desc">Mark specific working days as holidays — no bells will ring on these dates.</p>
-          <p className="card-desc card-desc-note">Expired exceptions are automatically removed after the day passes.</p>
+          <h3>{t('calendar.exceptionHolidayTitle')}</h3>
+          <p className="card-desc">{t('calendar.exceptionHolidayDesc')}</p>
+          <p className="card-desc card-desc-note">{t('calendar.expiredNote')}</p>
           {exceptionHoliday.length === 0 ? (
-            <p className="empty-text">No exception holidays configured.</p>
+            <p className="empty-text">{t('calendar.noExceptionHoliday')}</p>
           ) : (
             exceptionHoliday.map((e, i) => (
               <div key={i} className="cal-entry cal-entry-exhol">
@@ -411,23 +407,23 @@ export default function CalendarPage() {
                 <div className="cal-entry-body">
                   <div className="cal-entry-fields">
                     <div className="date-field-group">
-                      <label className="date-field-label">Date</label>
+                      <label className="date-field-label">{t('calendar.date')}</label>
                       <input type="date" className="date-picker" value={e.date} onChange={(ev) => updateExHoliday(i, 'date', ev.target.value)} />
                     </div>
                     <div className="date-field-group date-field-label-group">
-                      <label className="date-field-label">Label</label>
-                      <input className="date-label-input" value={e.label || ''} onChange={(ev) => updateExHoliday(i, 'label', ev.target.value)} placeholder="e.g. National holiday" maxLength={47} />
+                      <label className="date-field-label">{t('calendar.label')}</label>
+                      <input className="date-label-input" value={e.label || ''} onChange={(ev) => updateExHoliday(i, 'label', ev.target.value)} placeholder={t('calendar.exHolPlaceholder')} maxLength={47} />
                     </div>
                   </div>
                 </div>
-                <button className="delete-btn" onClick={() => removeExHoliday(i)} title="Remove exception">×</button>
+                <button className="delete-btn" onClick={() => removeExHoliday(i)} title={t('calendar.removeException')}>×</button>
               </div>
             ))
           )}
           <div className="cal-actions">
-            <button className="add-btn" onClick={addExHoliday}>+ Add Exception Holiday</button>
+            <button className="add-btn" onClick={addExHoliday}>{t('calendar.addExHoliday')}</button>
             <button className="save-button" onClick={handleSaveExceptions} disabled={saving}>
-              {saving ? 'Saving...' : 'Save Exceptions'}
+              {saving ? t('calendar.saving') : t('calendar.saveExceptions')}
             </button>
           </div>
         </div>

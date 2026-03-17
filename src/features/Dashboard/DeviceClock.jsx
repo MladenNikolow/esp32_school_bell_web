@@ -1,20 +1,17 @@
 import React, { useState, useEffect, useRef, memo } from 'react';
-
-const MONTH_NAMES = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
-];
-
-function formatDateLong(dateStr, dayOfWeek) {
-  if (!dateStr || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr || '';
-  const [y, m, d] = dateStr.split('-').map(Number);
-  const month = MONTH_NAMES[m - 1] || '';
-  return dayOfWeek
-    ? `${dayOfWeek}, ${month} ${d}, ${y}`
-    : `${month} ${d}, ${y}`;
-}
+import useLocale from '../../hooks/useLocale.jsx';
 
 function DeviceClock({ serverTime, serverDate, timeSynced, dayOfWeek, dayType, dayTypeLabel }) {
+  const { t } = useLocale();
+
+  function formatDateLong(dateStr, dow) {
+    if (!dateStr || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr || '';
+    const [y, m, d] = dateStr.split('-').map(Number);
+    const month = t(`clock.months.${m - 1}`);
+    return dow
+      ? `${dow}, ${d} ${month} ${y}`
+      : `${d} ${month} ${y}`;
+  }
   const [display, setDisplay] = useState({ time: serverTime, date: serverDate });
   const baseRef = useRef(null);
 
@@ -72,7 +69,7 @@ function DeviceClock({ serverTime, serverDate, timeSynced, dayOfWeek, dayType, d
         <div className="today-date-full">{formattedDate || '—'}</div>
         <div className={`sync-indicator ${timeSynced ? 'synced' : 'not-synced'}`}>
           <span className="sync-dot"></span>
-          {timeSynced ? 'Synced' : 'Not Synced'}
+          {timeSynced ? t('clock.synced') : t('clock.notSynced')}
         </div>
       </div>
       <div className="today-clock">{display.time}</div>

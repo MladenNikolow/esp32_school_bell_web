@@ -6,6 +6,7 @@ import {
   setFirstShift, setSecondShift,
   clearError, clearSaveSuccess,
 } from './ScheduleSlice.js';
+import useLocale from '../../hooks/useLocale.jsx';
 
 /* Shift time boundaries for validation */
 const FIRST_SHIFT_MAX_HOUR = 14;   // bells should be before 14:00
@@ -18,23 +19,23 @@ function formatDuration(sec) {
   return s > 0 ? `${m}m ${s}s` : `${m}m`;
 }
 
-function getShiftWarning(bells, isFirstShift) {
+function getShiftWarning(bells, isFirstShift, t) {
   if (!bells || bells.length === 0) return null;
   if (isFirstShift) {
     const late = bells.filter(b => b.hour >= FIRST_SHIFT_MAX_HOUR);
     if (late.length > 0) {
-      return `${late.length} bell(s) scheduled at ${FIRST_SHIFT_MAX_HOUR}:00 or later. First shift bells should be before ${FIRST_SHIFT_MAX_HOUR}:00.`;
+      return t('schedule.warningFirstShift', { count: late.length, hour: FIRST_SHIFT_MAX_HOUR });
     }
   } else {
     const early = bells.filter(b => b.hour < SECOND_SHIFT_MIN_HOUR);
     if (early.length > 0) {
-      return `${early.length} bell(s) scheduled before ${SECOND_SHIFT_MIN_HOUR}:00. Second shift bells should be ${SECOND_SHIFT_MIN_HOUR}:00 or later.`;
+      return t('schedule.warningSecondShift', { count: early.length, hour: SECOND_SHIFT_MIN_HOUR });
     }
   }
   return null;
 }
 
-function ShiftTable({ title, shift, onChangeShift, saving, isFirstShift }) {
+function ShiftTable({ title, shift, onChangeShift, saving, isFirstShift, t }) {
   const { enabled, bells } = shift;
 
   const toggleEnabled = () => {
@@ -55,7 +56,7 @@ function ShiftTable({ title, shift, onChangeShift, saving, isFirstShift }) {
     onChangeShift({ ...shift, bells: [...bells, { hour: defaultHour, minute: 0, durationSec: 3, label: '' }] });
   };
 
-  const warning = enabled ? getShiftWarning(bells, isFirstShift) : null;
+  const warning = enabled ? getShiftWarning(bells, isFirstShift, t) : null;
 
   return (
     <div className={`shift-section ${!enabled ? 'shift-disabled' : ''}`}>
@@ -63,7 +64,7 @@ function ShiftTable({ title, shift, onChangeShift, saving, isFirstShift }) {
         <h4>{title}</h4>
         <label className="shift-toggle">
           <input type="checkbox" checked={enabled} onChange={toggleEnabled} />
-          <span>{enabled ? 'Enabled' : 'Disabled'}</span>
+          <span>{enabled ? t('schedule.enabled') : t('schedule.disabled')}</span>
         </label>
       </div>
 
@@ -76,15 +77,15 @@ function ShiftTable({ title, shift, onChangeShift, saving, isFirstShift }) {
           )}
 
           {bells.length === 0 ? (
-            <p className="empty-text">No bells configured. Add a bell to get started.</p>
+            <p className="empty-text">{t('schedule.noBells')}</p>
           ) : (
             <div className="bell-table-wrap">
               <table className="bell-table">
                 <thead>
                   <tr>
-                    <th title="The time of day (HH:MM) when this bell will ring">Time</th>
-                    <th title="How long the bell rings in seconds (1–300)">Duration (s)</th>
-                    <th title="Optional name for this bell, e.g. 'First Period', 'Lunch Break'">Label</th>
+                    <th title={t('schedule.timeTooltip')}>{t('schedule.time')}</th>
+                    <th title={t('schedule.durationTooltip')}>{t('schedule.durationSec')}</th>
+                    <th title={t('schedule.labelTooltip')}>{t('schedule.label')}</th>
                     <th></th>
                   </tr>
                 </thead>
@@ -137,13 +138,13 @@ function ShiftTable({ title, shift, onChangeShift, saving, isFirstShift }) {
                               className="label-input"
                               value={b.label || ''}
                               onChange={(e) => updateBell(i, 'label', e.target.value)}
-                              placeholder="e.g. First Period"
-                              title="A descriptive name for this bell event"
+                              placeholder={t('schedule.labelPlaceholder')}
+                              title={t('schedule.labelTooltip')}
                               maxLength={47}
                             />
                           </td>
                           <td>
-                            <button className="delete-btn" onClick={() => removeBell(i)} title="Remove this bell">×</button>
+                            <button className="delete-btn" onClick={() => removeBell(i)} title={t('schedule.removeBell')}>×</button>
                           </td>
                         </tr>
                       ))}
@@ -153,7 +154,7 @@ function ShiftTable({ title, shift, onChangeShift, saving, isFirstShift }) {
               )}
 
               <div className="bell-actions">
-                <button className="add-btn" onClick={addBell}>+ Add Bell</button>
+                <button className="add-btn" onClick={addBell}>{t('schedule.addBell')}</button>
               </div>
         </>
       )}
@@ -165,6 +166,7 @@ export default function SchedulePage() {
   const dispatch = useDispatch();
   const { firstShift, secondShift, loading, saving, error, saveSuccess } =
     useSelector((s) => s.schedule);
+  const { t } = useLocale();
 
   const [showAutoGen, setShowAutoGen] = useState(false);
   const [autoConfig, setAutoConfig] = useState({
@@ -184,8 +186,8 @@ export default function SchedulePage() {
 
   useEffect(() => {
     if (saveSuccess) {
-      const t = setTimeout(() => dispatch(clearSaveSuccess()), 3000);
-      return () => clearTimeout(t);
+      const timer = setTimeout(() => dispatch(clearSaveSuccess()), 3000);
+      return () => clearTimeout(timer);
     }
   }, [saveSuccess, dispatch]);
 
@@ -194,7 +196,7 @@ export default function SchedulePage() {
   };
 
   const handleResetDefaults = () => {
-    if (!window.confirm('Load the factory default schedule? This will replace your current bell configuration (unsaved).')) return;
+    if (!window.confirm(t('schedule.resetConfirm'))) return;
     dispatch(fetchDefaults());
   };
 
@@ -208,7 +210,7 @@ export default function SchedulePage() {
     for (let i = 0; i < classCount; i++) {
       const hour = Math.floor(totalMinutes / 60) % 24;
       const minute = totalMinutes % 60;
-      bells.push({ hour, minute, durationSec: autoConfig.bellDuration, label: `Period ${i + 1}` });
+      bells.push({ hour, minute, durationSec: autoConfig.bellDuration, label: t('auto.period', { n: i + 1 }) });
       const brk = (i + 1 === autoConfig.bigBreakAfterClass)
         ? autoConfig.bigBreakDuration : autoConfig.breakDuration;
       totalMinutes += autoConfig.classDuration + brk;
@@ -231,17 +233,17 @@ export default function SchedulePage() {
   /* Compute preview times */
   const previewEndTime = (startH, startM, count) => {
     if (count <= 0) return null;
-    let t = startH * 60 + startM;
+    let mins = startH * 60 + startM;
     for (let i = 0; i < count - 1; i++) {
       const brk = (i + 1 === autoConfig.bigBreakAfterClass) ? autoConfig.bigBreakDuration : autoConfig.breakDuration;
-      t += autoConfig.classDuration + brk;
+      mins += autoConfig.classDuration + brk;
     }
-    t += autoConfig.classDuration; // last class end
-    return `${String(Math.floor(t / 60) % 24).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`;
+    mins += autoConfig.classDuration; // last class end
+    return `${String(Math.floor(mins / 60) % 24).padStart(2, '0')}:${String(mins % 60).padStart(2, '0')}`;
   };
 
   if (loading && firstShift.bells.length === 0 && secondShift.bells.length === 0) {
-    return <div className="schedule-page"><div className="loading-text">Loading schedule...</div></div>;
+    return <div className="schedule-page"><div className="loading-text">{t('schedule.loading')}</div></div>;
   }
 
   return (
@@ -252,41 +254,34 @@ export default function SchedulePage() {
           <button className="error-dismiss" onClick={() => dispatch(clearError())}>x</button>
         </div>
       )}
-      {saveSuccess && <div className="success-message">Saved successfully</div>}
+      {saveSuccess && <div className="success-message">{t('schedule.savedSuccess')}</div>}
 
       {/* Bell Timetable */}
       <div className="sched-card">
-        <h3>Bell Timetable</h3>
-        <p className="card-desc">
-          Configure bell schedules for morning (1st shift) and afternoon (2nd shift) classes.
-          Each shift can be independently enabled or disabled.
-          Working days and timezone can be configured in the <strong>Settings</strong> tab.
-        </p>
+        <h3>{t('schedule.bellTimetable')}</h3>
+        <p className="card-desc" dangerouslySetInnerHTML={{ __html: t('schedule.bellTimetableDesc') }} />
 
         <div className="timetable-toolbar">
           <button
             className={`mode-tab ${showAutoGen ? 'active' : ''}`}
             onClick={() => setShowAutoGen(!showAutoGen)}
           >
-            {showAutoGen ? 'Hide Auto Generate' : 'Auto Generate'}
+            {showAutoGen ? t('schedule.hideAutoGen') : t('schedule.autoGenerate')}
           </button>
           <button className="mode-tab" onClick={handleResetDefaults}>
-            Reset to Defaults
+            {t('schedule.resetDefaults')}
           </button>
         </div>
 
         {showAutoGen && (
           <div className="auto-generate-form auto-generate-unified">
-            <p className="auto-hint">
-              Generate a full day schedule across both shifts. Configure class counts for each shift
-              (set to 0 to disable a shift).
-            </p>
+            <p className="auto-hint">{t('auto.hint')}</p>
 
             <div className="auto-shift-columns">
               <div className="auto-shift-col">
-                <h5>1st Shift</h5>
+                <h5>{t('auto.firstShift')}</h5>
                 <div className="auto-form-row">
-                  <label>Start Time</label>
+                  <label>{t('auto.startTime')}</label>
                   <input
                     type="time"
                     className="time-input"
@@ -298,7 +293,7 @@ export default function SchedulePage() {
                   />
                 </div>
                 <div className="auto-form-row">
-                  <label>Number of Classes</label>
+                  <label>{t('auto.numClasses')}</label>
                   <input
                     type="number"
                     className="duration-input"
@@ -310,9 +305,9 @@ export default function SchedulePage() {
                 </div>
                 {autoConfig.firstClassCount > 0 && (
                   <div className="auto-generate-preview">
-                    <span className="preview-label">Preview:</span>
+                    <span className="preview-label">{t('auto.preview')}</span>
                     <span>
-                      {autoConfig.firstClassCount} classes,{' '}
+                      {autoConfig.firstClassCount} {t('auto.classes')},{' '}
                       {String(autoConfig.firstStartHour).padStart(2, '0')}:{String(autoConfig.firstStartMinute).padStart(2, '0')}{' '}
                       – {previewEndTime(autoConfig.firstStartHour, autoConfig.firstStartMinute, autoConfig.firstClassCount)}
                     </span>
@@ -321,9 +316,9 @@ export default function SchedulePage() {
               </div>
 
               <div className="auto-shift-col">
-                <h5>2nd Shift</h5>
+                <h5>{t('auto.secondShift')}</h5>
                 <div className="auto-form-row">
-                  <label>Start Time</label>
+                  <label>{t('auto.startTime')}</label>
                   <input
                     type="time"
                     className="time-input"
@@ -335,7 +330,7 @@ export default function SchedulePage() {
                   />
                 </div>
                 <div className="auto-form-row">
-                  <label>Number of Classes</label>
+                  <label>{t('auto.numClasses')}</label>
                   <input
                     type="number"
                     className="duration-input"
@@ -347,9 +342,9 @@ export default function SchedulePage() {
                 </div>
                 {autoConfig.secondClassCount > 0 && (
                   <div className="auto-generate-preview">
-                    <span className="preview-label">Preview:</span>
+                    <span className="preview-label">{t('auto.preview')}</span>
                     <span>
-                      {autoConfig.secondClassCount} classes,{' '}
+                      {autoConfig.secondClassCount} {t('auto.classes')},{' '}
                       {String(autoConfig.secondStartHour).padStart(2, '0')}:{String(autoConfig.secondStartMinute).padStart(2, '0')}{' '}
                       – {previewEndTime(autoConfig.secondStartHour, autoConfig.secondStartMinute, autoConfig.secondClassCount)}
                     </span>
@@ -358,9 +353,9 @@ export default function SchedulePage() {
               </div>
             </div>
 
-            <h5>Shared Settings</h5>
+            <h5>{t('auto.sharedSettings')}</h5>
             <div className="auto-form-row">
-              <label>Class Duration (min)</label>
+              <label>{t('auto.classDuration')}</label>
               <input
                 type="number" className="duration-input" min="5" max="120"
                 value={autoConfig.classDuration}
@@ -368,7 +363,7 @@ export default function SchedulePage() {
               />
             </div>
             <div className="auto-form-row">
-              <label>Break Duration (min)</label>
+              <label>{t('auto.breakDuration')}</label>
               <input
                 type="number" className="duration-input" min="0" max="60"
                 value={autoConfig.breakDuration}
@@ -376,7 +371,7 @@ export default function SchedulePage() {
               />
             </div>
             <div className="auto-form-row">
-              <label>Big Break Duration (min)</label>
+              <label>{t('auto.bigBreakDuration')}</label>
               <input
                 type="number" className="duration-input" min="0" max="60"
                 value={autoConfig.bigBreakDuration}
@@ -384,7 +379,7 @@ export default function SchedulePage() {
               />
             </div>
             <div className="auto-form-row">
-              <label>Big Break After Class</label>
+              <label>{t('auto.bigBreakAfterClass')}</label>
               <input
                 type="number" className="duration-input" min="1" max="19"
                 value={autoConfig.bigBreakAfterClass}
@@ -392,7 +387,7 @@ export default function SchedulePage() {
               />
             </div>
             <div className="auto-form-row">
-              <label>Bell Ring Duration (sec)</label>
+              <label>{t('auto.bellRingDuration')}</label>
               <input
                 type="number" className="duration-input" min="1" max="300"
                 value={autoConfig.bellDuration}
@@ -401,37 +396,35 @@ export default function SchedulePage() {
             </div>
 
             <button className="add-btn generate-btn" onClick={handleAutoGenerate}>
-              Generate & Apply
+              {t('auto.generateApply')}
             </button>
-            <p className="auto-hint">This will replace all current bells in both shifts.</p>
+            <p className="auto-hint">{t('auto.replaceWarning')}</p>
           </div>
         )}
 
         <ShiftTable
-          title="1st Shift — Morning Classes"
+          title={t('schedule.firstShift')}
           shift={firstShift}
           onChangeShift={(s) => dispatch(setFirstShift(s))}
           saving={saving}
           isFirstShift={true}
+          t={t}
         />
 
         <ShiftTable
-          title="2nd Shift — Afternoon Classes"
+          title={t('schedule.secondShift')}
           shift={secondShift}
           onChangeShift={(s) => dispatch(setSecondShift(s))}
           saving={saving}
           isFirstShift={false}
+          t={t}
         />
 
-        <div className="bell-info-box">
-          <strong>How it works:</strong> Bells ring automatically at the configured times on every <em>working day</em>.
-          Each shift can be enabled or disabled independently.
-          Holidays and exception days override this schedule. Duration sets how many seconds the relay stays active.
-        </div>
+        <div className="bell-info-box" dangerouslySetInnerHTML={{ __html: t('schedule.howItWorks') }} />
 
         <div className="bell-actions">
           <button className="save-button" onClick={handleSaveBells} disabled={saving}>
-            {saving ? 'Saving...' : 'Save Bells'}
+            {saving ? t('schedule.saving') : t('schedule.saveBells')}
           </button>
         </div>
       </div>

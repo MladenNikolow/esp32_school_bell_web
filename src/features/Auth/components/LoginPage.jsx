@@ -3,12 +3,14 @@ import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { loginUser, clearAuthError } from '../AuthSlice.js';
 import useTheme from '../../../hooks/useTheme.js';
+import useLocale from '../../../hooks/useLocale.jsx';
 import RingyLogo from '../../../components/RingyLogo.jsx';
 
 export default function LoginPage() {
   const dispatch = useDispatch();
   const { isLoading, error } = useSelector((state) => state.auth);
   const { theme, toggleTheme } = useTheme();
+  const { t, locale, setLocale, toggleLocale } = useLocale();
   
   const [credentials, setCredentials] = useState({
     username: '',
@@ -69,9 +71,25 @@ export default function LoginPage() {
   return (
     <div className="login-container">
       <div className="login-header">
-        <button className="theme-toggle login-theme-toggle" onClick={toggleTheme} title="Toggle dark mode">
-          {theme === 'dark' ? '☀️' : '🌙'}
-        </button>
+        <div className="login-header-toggles">
+          <div className="lang-switcher" role="radiogroup" aria-label={t('lang.title')}>
+            <button
+              className={`lang-switcher-btn${locale === 'bg' ? ' active' : ''}`}
+              onClick={() => setLocale('bg')}
+              aria-checked={locale === 'bg'}
+              role="radio"
+            >BG</button>
+            <button
+              className={`lang-switcher-btn${locale === 'en' ? ' active' : ''}`}
+              onClick={() => setLocale('en')}
+              aria-checked={locale === 'en'}
+              role="radio"
+            >EN</button>
+          </div>
+          <button className="theme-toggle login-theme-toggle" onClick={toggleTheme} title={t('auth.toggleDarkMode')}>
+            {theme === 'dark' ? '☀️' : '🌙'}
+          </button>
+        </div>
         <RingyLogo height="72px" />
       </div>
       
@@ -85,7 +103,7 @@ export default function LoginPage() {
           
           <div className="form-group">
             <label htmlFor="username" className="form-label">
-              Username
+              {t('auth.username')}
             </label>
             <input
               id="username"
@@ -94,20 +112,20 @@ export default function LoginPage() {
               value={credentials.username}
               onChange={(e) => handleInputChange('username', e.target.value)}
               onBlur={() => handleInputBlur('username')}
-              placeholder="Enter username"
+              placeholder={t('auth.enterUsername')}
               disabled={isLoading}
               autoComplete="username"
               autoCapitalize="none"
               autoCorrect="off"
             />
             {showUsernameError && (
-              <div className="field-error">Username is required</div>
+              <div className="field-error">{t('auth.usernameRequired')}</div>
             )}
           </div>
 
           <div className="form-group">
             <label htmlFor="password" className="form-label">
-              Password
+              {t('auth.password')}
             </label>
             <div className="password-input-container">
               <input
@@ -117,7 +135,7 @@ export default function LoginPage() {
                 value={credentials.password}
                 onChange={(e) => handleInputChange('password', e.target.value)}
                 onBlur={() => handleInputBlur('password')}
-                placeholder="Enter password"
+                placeholder={t('auth.enterPassword')}
                 disabled={isLoading}
                 autoComplete="current-password"
               />
@@ -126,13 +144,13 @@ export default function LoginPage() {
                 className="password-toggle"
                 onClick={() => setShowPassword(!showPassword)}
                 disabled={isLoading}
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                aria-label={showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
               >
                 {showPassword ? '👁️' : '👁️‍🗨️'}
               </button>
             </div>
             {showPasswordError && (
-              <div className="field-error">Password is required</div>
+              <div className="field-error">{t('auth.passwordRequired')}</div>
             )}
           </div>
 
@@ -142,14 +160,14 @@ export default function LoginPage() {
               className="login-button"
               disabled={!isFormValid || isLoading}
             >
-              {isLoading ? 'Connecting...' : 'Connect'}
+              {isLoading ? t('auth.connecting') : t('auth.connect')}
             </button>
           </div>
         </form>
 
         <div className="login-footer">
           <div className="device-info">
-            ESP32 Authentication System
+            {t('auth.footer')}
           </div>
         </div>
       </div>

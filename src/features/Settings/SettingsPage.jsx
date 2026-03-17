@@ -12,16 +12,9 @@ import {
 } from './SettingsSlice.js';
 import TokenManager from '../../utils/TokenManager.js';
 import TimezonePicker from '../Schedule/TimezonePicker.jsx';
+import useLocale from '../../hooks/useLocale.jsx';
 
-const ORDERED_DAYS = [
-  { idx: 1, name: 'Mon' },
-  { idx: 2, name: 'Tue' },
-  { idx: 3, name: 'Wed' },
-  { idx: 4, name: 'Thu' },
-  { idx: 5, name: 'Fri' },
-  { idx: 6, name: 'Sat' },
-  { idx: 0, name: 'Sun' },
-];
+const ORDERED_DAYS = [1, 2, 3, 4, 5, 6, 0];
 
 function formatUptime(sec) {
   if (!sec && sec !== 0) return '—';
@@ -45,6 +38,7 @@ function formatBytes(bytes) {
 
 export default function SettingsPage() {
   const dispatch = useDispatch();
+  const { t } = useLocale();
 
   /* Schedule state (timezone + working days) */
   const { timezone, workingDays, saving: savingSchedule, saveSuccess } =
@@ -92,7 +86,7 @@ export default function SettingsPage() {
   };
 
   const handleReboot = () => {
-    if (!window.confirm('Reboot the device? The connection will be lost and you will need to log in again.')) return;
+    if (!window.confirm(t('settings.rebootConfirm'))) return;
     dispatch(rebootDevice()).then((result) => {
       if (result.meta.requestStatus === 'fulfilled') {
         // Clear session so the user must log in again after reboot
@@ -103,11 +97,7 @@ export default function SettingsPage() {
   };
 
   const handleFactoryReset = () => {
-    if (!window.confirm(
-      'Reset ALL settings to factory defaults?\n\n' +
-      'This will restore the default timezone, working days, bell schedules, ' +
-      'holidays, and exceptions. This action cannot be undone.'
-    )) return;
+    if (!window.confirm(t('settings.factoryResetConfirm'))) return;
     dispatch(factoryReset()).then((result) => {
       if (result.meta.requestStatus === 'fulfilled') {
         // Reload fresh data from device after reset
@@ -127,58 +117,58 @@ export default function SettingsPage() {
           <button className="error-dismiss" onClick={() => { dispatch(clearError()); dispatch(clearScheduleError()); }}>×</button>
         </div>
       )}
-      {saveSuccess && <div className="success-message">Settings saved</div>}
+      {saveSuccess && <div className="success-message">{t('settings.settingsSaved')}</div>}
       {actionSuccess && <div className="success-message">{actionSuccess}</div>}
 
       {/* General Settings */}
       <div className="sched-card">
-        <h3>General Settings</h3>
+        <h3>{t('settings.generalSettings')}</h3>
 
         <div className="settings-section">
-          <h4>Working Days</h4>
-          <p className="card-desc">Select the days when bells should ring on a normal week.</p>
+          <h4>{t('settings.workingDays')}</h4>
+          <p className="card-desc">{t('settings.workingDaysDesc')}</p>
 
           <div className="day-picker">
-            {ORDERED_DAYS.map(({ idx, name }) => (
+            {ORDERED_DAYS.map((idx) => (
               <button
                 key={idx}
                 className={`day-btn ${workingDays.includes(idx) ? 'active' : ''}`}
                 onClick={() => toggleDay(idx)}
               >
-                {name}
+                {t(`settings.days.${idx}`)}
               </button>
             ))}
           </div>
 
           <div className="day-legend">
-            <span className="legend-item"><span className="legend-swatch legend-active"></span> Working day — bells will ring</span>
-            <span className="legend-item"><span className="legend-swatch legend-inactive"></span> Day off — no bells</span>
+            <span className="legend-item"><span className="legend-swatch legend-active"></span> {t('settings.legendWorking')}</span>
+            <span className="legend-item"><span className="legend-swatch legend-inactive"></span> {t('settings.legendOff')}</span>
           </div>
         </div>
 
         <div className="settings-section">
-          <h4>Timezone</h4>
+          <h4>{t('settings.timezone')}</h4>
           <div className="settings-row">
             <TimezonePicker
               value={timezone}
               onChange={(tz) => dispatch(setTimezone(tz))}
             />
-            <span className="field-hint">Defines the local time used for bell scheduling and display.</span>
+            <span className="field-hint">{t('settings.timezoneHint')}</span>
           </div>
         </div>
 
         <button className="save-button" onClick={handleSaveSettings} disabled={savingSchedule}>
-          {savingSchedule ? 'Saving...' : 'Save Settings'}
+          {savingSchedule ? t('settings.saving') : t('settings.saveSettings')}
         </button>
       </div>
 
       {/* Bell Test */}
       <div className="sched-card">
-        <h3>Bell Test</h3>
-        <p className="card-desc">Ring the bell to verify the relay connection works correctly.</p>
+        <h3>{t('settings.bellTest')}</h3>
+        <p className="card-desc">{t('settings.bellTestDesc')}</p>
 
         <div className="settings-row">
-          <label className="form-label">Test Duration</label>
+          <label className="form-label">{t('settings.testDuration')}</label>
           <div className="test-duration-control">
             <input
               type="range"
@@ -197,51 +187,51 @@ export default function SettingsPage() {
           onClick={handleTestBell}
           disabled={testingBell || rebooting}
         >
-          {testingBell ? 'Ringing...' : '🔔 Test Bell'}
+          {testingBell ? t('settings.testRinging') : t('settings.testBell')}
         </button>
       </div>
 
       {/* System Information */}
       <div className="sched-card">
-        <h3>System Information</h3>
+        <h3>{t('settings.systemInfo')}</h3>
 
         <div className="info-grid">
           <div className="info-item">
-            <span className="info-label">Device Time</span>
+            <span className="info-label">{t('settings.deviceTime')}</span>
             <span className="info-value">{systemInfo?.time || '—'}</span>
           </div>
           <div className="info-item">
-            <span className="info-label">Date</span>
+            <span className="info-label">{t('settings.date')}</span>
             <span className="info-value">{systemInfo?.date || '—'}</span>
           </div>
           <div className="info-item">
-            <span className="info-label">SNTP Status</span>
+            <span className="info-label">{t('settings.sntpStatus')}</span>
             <span className={`info-value ${systemInfo && !systemInfo.timeSynced ? 'text-warn' : ''}`}>
-              {systemInfo ? (systemInfo.timeSynced ? 'Synchronized' : 'Not Synchronized') : '—'}
+              {systemInfo ? (systemInfo.timeSynced ? t('settings.synchronized') : t('settings.notSynchronized')) : '—'}
             </span>
           </div>
           <div className="info-item">
-            <span className="info-label">Active Timezone</span>
+            <span className="info-label">{t('settings.activeTimezone')}</span>
             <span className="info-value">{systemInfo?.timezone || '—'}</span>
           </div>
           <div className="info-item">
-            <span className="info-label">Uptime</span>
+            <span className="info-label">{t('settings.uptime')}</span>
             <span className="info-value">{formatUptime(systemInfo?.uptimeSec)}</span>
           </div>
           <div className="info-item">
-            <span className="info-label">Free Heap</span>
+            <span className="info-label">{t('settings.freeHeap')}</span>
             <span className="info-value">{formatBytes(systemInfo?.freeHeap)}</span>
           </div>
           <div className="info-item">
-            <span className="info-label">Min Free Heap</span>
+            <span className="info-label">{t('settings.minFreeHeap')}</span>
             <span className="info-value">{formatBytes(systemInfo?.minFreeHeap)}</span>
           </div>
           <div className="info-item">
-            <span className="info-label">CPU Cores</span>
+            <span className="info-label">{t('settings.cpuCores')}</span>
             <span className="info-value">{systemInfo?.chipCores ?? '—'}</span>
           </div>
           <div className="info-item">
-            <span className="info-label">ESP-IDF Version</span>
+            <span className="info-label">{t('settings.idfVersion')}</span>
             <span className="info-value">{systemInfo?.idfVersion || '—'}</span>
           </div>
         </div>
@@ -251,43 +241,40 @@ export default function SettingsPage() {
           onClick={() => dispatch(fetchSystemInfo())}
           style={{ marginTop: 16 }}
         >
-          ↻ Refresh
+          {t('settings.refresh')}
         </button>
       </div>
 
       {/* System Actions */}
       <div className="sched-card">
-        <h3>System Actions</h3>
+        <h3>{t('settings.systemActions')}</h3>
 
         <div className="system-actions">
           <div className="system-action-item">
             <div className="action-info">
-              <strong>Reboot Device</strong>
-              <p className="card-desc">Restart the ESP32. The connection will be lost briefly.</p>
+              <strong>{t('settings.reboot')}</strong>
+              <p className="card-desc">{t('settings.rebootDesc')}</p>
             </div>
             <button
               className="save-button action-btn"
               onClick={handleReboot}
               disabled={rebooting || resetting}
             >
-              {rebooting ? 'Rebooting...' : 'Reboot'}
+              {rebooting ? t('settings.rebooting') : t('settings.rebootBtn')}
             </button>
           </div>
 
           <div className="system-action-item system-action-danger">
             <div className="action-info">
-              <strong>Factory Reset</strong>
-              <p className="card-desc">
-                Restore all schedule settings to factory defaults. This resets timezone, working days,
-                bell schedules, holidays, and exceptions.
-              </p>
+              <strong>{t('settings.factoryReset')}</strong>
+              <p className="card-desc">{t('settings.factoryResetDesc')}</p>
             </div>
             <button
               className="save-button action-btn danger-btn"
               onClick={handleFactoryReset}
               disabled={rebooting || resetting}
             >
-              {resetting ? 'Resetting...' : 'Factory Reset'}
+              {resetting ? t('settings.resetting') : t('settings.factoryResetBtn')}
             </button>
           </div>
         </div>

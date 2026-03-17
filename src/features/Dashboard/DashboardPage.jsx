@@ -2,27 +2,19 @@ import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { fetchBellStatus, togglePanic, clearError } from './DashboardSlice.js';
 import DeviceClock from './DeviceClock.jsx';
+import useLocale from '../../hooks/useLocale.jsx';
 
-const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-
-const DAY_TYPE_LABELS = {
-  off: 'Weekend',
-  working: 'Working Day',
-  holiday: 'Holiday',
-  exceptionWorking: 'Exception Working',
-  exceptionHoliday: 'Exception Holiday',
-};
-
-const BELL_STATE_CONFIG = {
-  idle: { label: 'Idle', className: 'status-idle' },
-  ringing: { label: 'Ringing', className: 'status-ringing' },
-  panic: { label: 'PANIC', className: 'status-panic' },
+const BELL_STATE_CLASS = {
+  idle: 'status-idle',
+  ringing: 'status-ringing',
+  panic: 'status-panic',
 };
 
 export default function DashboardPage() {
   const dispatch = useDispatch();
   const { bellState, panicMode, dayType, timeSynced, currentTime, currentDate, nextBell, error } =
     useSelector((s) => s.dashboard);
+  const { t } = useLocale();
   const [confirmPanic, setConfirmPanic] = useState(false);
   const intervalRef = useRef(null);
 
@@ -49,13 +41,14 @@ export default function DashboardPage() {
     setConfirmPanic(false);
   };
 
-  const stateConfig = BELL_STATE_CONFIG[bellState] || BELL_STATE_CONFIG.idle;
+  const stateClassName = BELL_STATE_CLASS[bellState] || BELL_STATE_CLASS.idle;
+  const stateLabel = t(`bellState.${bellState || 'idle'}`);
 
   /* Derive day-of-week from currentDate (YYYY-MM-DD) */
   let dayOfWeek = '';
   if (currentDate && /^\d{4}-\d{2}-\d{2}$/.test(currentDate)) {
     const d = new Date(currentDate + 'T00:00:00');
-    dayOfWeek = DAY_NAMES[d.getDay()] || '';
+    dayOfWeek = t(`clock.days.${d.getDay()}`);
   }
 
   return (
@@ -75,45 +68,45 @@ export default function DashboardPage() {
           timeSynced={timeSynced}
           dayOfWeek={dayOfWeek}
           dayType={dayType}
-          dayTypeLabel={DAY_TYPE_LABELS[dayType] || dayType}
+          dayTypeLabel={t(`dayType.${dayType}`) || dayType}
         />
 
         {/* Row 2: Bell Status */}
         <div className="dash-card">
-          <h3>Bell Status</h3>
-          <div className={`bell-status-indicator ${stateConfig.className}`}>
+          <h3>{t('dashboard.bellStatus')}</h3>
+          <div className={`bell-status-indicator ${stateClassName}`}>
             <span className="bell-status-dot"></span>
-            <span className="bell-status-label">{stateConfig.label}</span>
+            <span className="bell-status-label">{stateLabel}</span>
           </div>
         </div>
 
         {/* Row 2: Next Bell */}
         <div className="dash-card">
-          <h3>Next Bell</h3>
+          <h3>{t('dashboard.nextBell')}</h3>
           {nextBell ? (
             <div className="next-bell-info">
               <div className="next-bell-time">{nextBell.time}</div>
-              <div className="next-bell-duration">Ring duration: {nextBell.durationSec}s</div>
+              <div className="next-bell-duration">{t('dashboard.ringDuration', { duration: nextBell.durationSec })}</div>
             </div>
           ) : (
-            <div className="next-bell-none">No upcoming bells</div>
+            <div className="next-bell-none">{t('dashboard.noUpcoming')}</div>
           )}
         </div>
       </div>
 
       {/* Panic Control */}
       <div className="dash-card panic-card">
-        <h3>Panic Mode</h3>
+        <h3>{t('dashboard.panicMode')}</h3>
         <p className="panic-desc">
           {panicMode
-            ? 'Bell is ringing continuously. Press to stop.'
-            : 'Activate to ring the bell continuously.'}
+            ? t('dashboard.panicActive')
+            : t('dashboard.panicIdle')}
         </p>
         <button
           className={`panic-btn ${panicMode ? 'panic-active' : ''}`}
           onClick={handlePanicToggle}
         >
-          {panicMode ? 'Stop Panic' : 'Activate Panic'}
+          {panicMode ? t('dashboard.stopPanic') : t('dashboard.activatePanic')}
         </button>
       </div>
 
@@ -121,11 +114,11 @@ export default function DashboardPage() {
       {confirmPanic && (
         <div className="modal-overlay" onClick={() => setConfirmPanic(false)}>
           <div className="modal-dialog" onClick={(e) => e.stopPropagation()}>
-            <h3>Confirm Panic Mode</h3>
-            <p>This will ring the bell continuously until manually stopped. Continue?</p>
+            <h3>{t('dashboard.confirmPanicTitle')}</h3>
+            <p>{t('dashboard.confirmPanicMsg')}</p>
             <div className="modal-actions">
-              <button className="modal-cancel" onClick={() => setConfirmPanic(false)}>Cancel</button>
-              <button className="panic-btn" onClick={confirmPanicEnable}>Activate</button>
+              <button className="modal-cancel" onClick={() => setConfirmPanic(false)}>{t('dashboard.cancel')}</button>
+              <button className="panic-btn" onClick={confirmPanicEnable}>{t('dashboard.activate')}</button>
             </div>
           </div>
         </div>

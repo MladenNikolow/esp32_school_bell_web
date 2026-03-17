@@ -1,22 +1,19 @@
 import React from 'react';
+import useLocale from '../../hooks/useLocale.jsx';
 
-const TABS = [
-  { id: 'dashboard', label: 'Dashboard' },
-  { id: 'schedule', label: 'Schedule' },
-  { id: 'calendar', label: 'Calendar' },
-  { id: 'settings', label: 'Settings' },
-];
+const TAB_IDS = ['dashboard', 'schedule', 'calendar', 'settings'];
 
 export default function Navigation({ activeTab, onTabChange }) {
+  const { t } = useLocale();
   return (
     <nav className="tab-nav">
-      {TABS.map((tab) => (
+      {TAB_IDS.map((id) => (
         <button
-          key={tab.id}
-          className={`tab-btn${activeTab === tab.id ? ' active' : ''}`}
-          onClick={() => onTabChange(tab.id)}
+          key={id}
+          className={`tab-btn${activeTab === id ? ' active' : ''}`}
+          onClick={() => onTabChange(id)}
         >
-          {tab.label}
+          {t(`nav.${id}`)}
         </button>
       ))}
     </nav>

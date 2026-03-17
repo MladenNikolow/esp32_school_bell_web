@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import useLocale from '../../hooks/useLocale.jsx';
 
 function formatDuration(sec) {
   if (sec < 60) return `${sec}s`;
@@ -18,6 +19,7 @@ function formatDuration(sec) {
  * @param {Object} [props.autoDefaults] - Override auto-generate defaults
  */
 export default function BellScheduleEditor({ bells, onChangeBells, title, compact, autoDefaults }) {
+  const { t } = useLocale();
   const [mode, setMode] = useState('manual');
   const [autoConfig, setAutoConfig] = useState({
     startHour: 7,
@@ -54,7 +56,7 @@ export default function BellScheduleEditor({ bells, onChangeBells, title, compac
         hour,
         minute,
         durationSec: autoConfig.bellDuration,
-        label: `Period ${i + 1}`,
+        label: t('auto.period', { n: i + 1 }),
       });
       const breakAfterThis = (i + 1 === autoConfig.bigBreakAfterClass)
         ? autoConfig.bigBreakDuration
@@ -79,20 +81,20 @@ export default function BellScheduleEditor({ bells, onChangeBells, title, compac
           className={`mode-tab ${mode === 'manual' ? 'active' : ''}`}
           onClick={() => setMode('manual')}
         >
-          Manual
+          {t('schedule.manual')}
         </button>
         <button
           className={`mode-tab ${mode === 'auto' ? 'active' : ''}`}
           onClick={() => setMode('auto')}
         >
-          Auto Generate
+          {t('schedule.autoGenerate')}
         </button>
       </div>
 
       {mode === 'auto' && (
         <div className="auto-generate-form">
           <div className="auto-form-row">
-            <label>Start Time</label>
+            <label>{t('auto.startTime')}</label>
             <input
               type="time"
               className="time-input"
@@ -104,7 +106,7 @@ export default function BellScheduleEditor({ bells, onChangeBells, title, compac
             />
           </div>
           <div className="auto-form-row">
-            <label>Class Duration (min)</label>
+            <label>{t('auto.classDuration')}</label>
             <input
               type="number"
               className="duration-input"
@@ -115,7 +117,7 @@ export default function BellScheduleEditor({ bells, onChangeBells, title, compac
             />
           </div>
           <div className="auto-form-row">
-            <label>Break Duration (min)</label>
+            <label>{t('auto.breakDuration')}</label>
             <input
               type="number"
               className="duration-input"
@@ -126,7 +128,7 @@ export default function BellScheduleEditor({ bells, onChangeBells, title, compac
             />
           </div>
           <div className="auto-form-row">
-            <label>Big Break Duration (min)</label>
+            <label>{t('auto.bigBreakDuration')}</label>
             <input
               type="number"
               className="duration-input"
@@ -137,7 +139,7 @@ export default function BellScheduleEditor({ bells, onChangeBells, title, compac
             />
           </div>
           <div className="auto-form-row">
-            <label>Big Break After Class</label>
+            <label>{t('auto.bigBreakAfterClass')}</label>
             <input
               type="number"
               className="duration-input"
@@ -148,7 +150,7 @@ export default function BellScheduleEditor({ bells, onChangeBells, title, compac
             />
           </div>
           <div className="auto-form-row">
-            <label>Number of Classes</label>
+            <label>{t('auto.numClasses')}</label>
             <input
               type="number"
               className="duration-input"
@@ -159,7 +161,7 @@ export default function BellScheduleEditor({ bells, onChangeBells, title, compac
             />
           </div>
           <div className="auto-form-row">
-            <label>Bell Ring Duration (sec)</label>
+            <label>{t('auto.bellRingDuration')}</label>
             <input
               type="number"
               className="duration-input"
@@ -170,7 +172,7 @@ export default function BellScheduleEditor({ bells, onChangeBells, title, compac
             />
           </div>
           <div className="auto-generate-preview">
-            <span className="preview-label">Preview:</span>
+            <span className="preview-label">{t('auto.preview')}:</span>
             {(() => {
               let last = autoConfig.startHour * 60 + autoConfig.startMinute;
               for (let i = 0; i < autoConfig.classCount - 1; i++) {
@@ -180,34 +182,34 @@ export default function BellScheduleEditor({ bells, onChangeBells, title, compac
               }
               const endH = Math.floor(last / 60) % 24;
               const endM = last % 60;
+              const from = `${String(autoConfig.startHour).padStart(2, '0')}:${String(autoConfig.startMinute).padStart(2, '0')}`;
+              const to = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
               return (
                 <span>
-                  {autoConfig.classCount} classes from{' '}
-                  {String(autoConfig.startHour).padStart(2, '0')}:{String(autoConfig.startMinute).padStart(2, '0')}{' '}
-                  to {String(endH).padStart(2, '0')}:{String(endM).padStart(2, '0')}
+                  {t('auto.previewRange', { count: autoConfig.classCount, from, to })}
                 </span>
               );
             })()}
           </div>
           <button className="add-btn generate-btn" onClick={generateBells}>
-            Generate & Apply
+            {t('auto.generateApply')}
           </button>
-          <p className="auto-hint">This will replace all current bells.</p>
+          <p className="auto-hint">{t('auto.replaceWarningSimple')}</p>
         </div>
       )}
 
       {mode === 'manual' && (
         <>
           {bells.length === 0 ? (
-            <p className="empty-text">No bells configured. Add a bell to get started.</p>
+            <p className="empty-text">{t('schedule.noBells')}</p>
           ) : (
             <div className="bell-table-wrap">
               <table className="bell-table">
                 <thead>
                   <tr>
-                    <th>Time</th>
-                    <th>Duration (s)</th>
-                    <th>Label</th>
+                    <th>{t('schedule.time')}</th>
+                    <th>{t('schedule.durationSec')}</th>
+                    <th>{t('schedule.label')}</th>
                     <th></th>
                   </tr>
                 </thead>
@@ -253,12 +255,12 @@ export default function BellScheduleEditor({ bells, onChangeBells, title, compac
                           className="label-input"
                           value={b.label || ''}
                           onChange={(e) => updateBell(i, 'label', e.target.value)}
-                          placeholder="e.g. Period 1"
+                          placeholder={t('schedule.labelPlaceholder')}
                           maxLength={47}
                         />
                       </td>
                       <td>
-                        <button className="delete-btn" onClick={() => removeBell(i)} title="Remove">×</button>
+                        <button className="delete-btn" onClick={() => removeBell(i)} title={t('schedule.removeBell')}>×</button>
                       </td>
                     </tr>
                   ))}
@@ -267,7 +269,7 @@ export default function BellScheduleEditor({ bells, onChangeBells, title, compac
             </div>
           )}
           <div className="bell-actions">
-            <button className="add-btn" onClick={addBell}>+ Add Bell</button>
+            <button className="add-btn" onClick={addBell}>{t('schedule.addBell')}</button>
           </div>
         </>
       )}

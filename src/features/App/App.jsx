@@ -3,9 +3,11 @@ import { useSelector, useDispatch } from 'react-redux';
 import { checkWifiMode } from '../WiFiConfig/WiFiConfigSlice.js';
 import WiFiConfigPage from '../WiFiConfig/components/WiFiConfigPage.jsx';
 import AuthGuard from '../Auth/components/AuthGuard.jsx';
+import useLocale from '../../hooks/useLocale.jsx';
 
 export default function App() {
   const dispatch = useDispatch();
+  const { t } = useLocale();
   const { isApMode, wifiModeChecked } = useSelector((state) => state.wifiConfig);
 
   useEffect(() => {
@@ -20,7 +22,7 @@ export default function App() {
       <div className="auth-loading">
         <div className="loading-container">
           <div className="loading-spinner"></div>
-          <div className="loading-text">Connecting to device...</div>
+          <div className="loading-text">{t('app.connecting')}</div>
         </div>
       </div>
     );

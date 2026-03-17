@@ -59,6 +59,58 @@ body {
   transform: translateY(-50%);
 }
 
+.login-header-toggles {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.login-header-toggles .login-theme-toggle,
+.login-header-toggles .lang-switcher {
+  position: static;
+  transform: none;
+}
+
+/* Language switcher – segmented control */
+.lang-switcher {
+  display: inline-flex;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.lang-switcher-btn {
+  background: transparent;
+  border: none;
+  padding: 5px 10px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  color: #888;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.lang-switcher-btn.active {
+  background: var(--primary, #4f46e5);
+  color: #fff;
+}
+
+.lang-switcher-btn:not(.active):hover {
+  background: #f5f5f5;
+}
+
+/* Header toggles group (app header) */
+.header-toggles {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .login-content {
   flex: 1;
   display: flex;
@@ -662,8 +714,7 @@ body {
 
 /* Mobile */
 @media (max-width: 480px) {
-  .login-content,
-  .wifi-config-content {
+  .login-content {
     padding: 20px 16px;
   }
   
@@ -735,38 +786,31 @@ body {
    WIFI CONFIG PAGE STYLES
    ============================================ */
 
-.wifi-config-container {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+.wifi-ap-info {
   margin: 0;
-  padding: 0;
+  color: #424242;
+  font-size: 15px;
+  line-height: 1.5;
 }
 
-.wifi-config-header {
-  background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
-  color: white;
-  padding: 20px;
-  text-align: center;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-}
-
-.wifi-config-header h1 {
-  margin: 0;
-  font-size: 24px;
+.wifi-section-title {
+  margin: 0 0 4px;
+  font-size: 18px;
   font-weight: 500;
-  letter-spacing: 0.5px;
+  color: #424242;
 }
 
-.wifi-config-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  padding: 24px 20px 20px;
-  max-width: 500px;
-  margin: 0 auto;
-  width: 100%;
+.wifi-band-note {
+  margin: 0 0 16px;
+  font-size: 12px;
+  color: #888;
+  font-style: italic;
+}
+
+.network-channel {
+  font-size: 12px;
+  font-weight: 400;
+  color: #888;
 }
 
 .network-list {
@@ -774,45 +818,104 @@ body {
   overflow-y: auto;
   border: 1px solid #e0e0e0;
   border-radius: 8px;
+  margin-bottom: 12px;
 }
 
 .network-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 16px;
-  cursor: pointer;
-  transition: background 0.15s ease;
   border-bottom: 1px solid #f0f0f0;
+  transition: background 0.15s ease;
 }
 
 .network-item:last-child {
   border-bottom: none;
 }
 
-.network-item:hover {
+.network-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  cursor: pointer;
+}
+
+.network-item-header:hover {
   background: #e3f2fd;
 }
 
-.network-item.selected {
-  background: #bbdefb;
+.network-ssid {
+  font-size: 15px;
   font-weight: 500;
+  color: #333;
 }
 
-.signal-bar {
-  font-size: 13px;
-  color: #666;
-  min-width: 64px;
-  text-align: right;
+.network-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-.signal-bar[data-level="4"] { color: #2e7d32; }
-.signal-bar[data-level="3"] { color: #558b2f; }
-.signal-bar[data-level="2"] { color: #f9a825; }
-.signal-bar[data-level="1"] { color: #d32f2f; }
+.expand-arrow {
+  font-size: 12px;
+  color: #999;
+}
+
+.network-item-body {
+  padding: 0 16px 12px;
+}
+
+.network-connect-btn {
+  margin-top: 8px;
+}
+
+.signal-icon {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 16px;
+}
+
+.signal-bar-segment {
+  display: inline-block;
+  width: 4px;
+  background: #ccc;
+  border-radius: 1px;
+}
+
+.signal-bar-segment:nth-child(1) { height: 4px; }
+.signal-bar-segment:nth-child(2) { height: 7px; }
+.signal-bar-segment:nth-child(3) { height: 10px; }
+.signal-bar-segment:nth-child(4) { height: 14px; }
+
+.signal-bar-segment.active[data-level="4"] { background: #2e7d32; }
+.signal-bar-segment.active[data-level="3"] { background: #558b2f; }
+.signal-bar-segment.active[data-level="2"] { background: #f9a825; }
+.signal-bar-segment.active[data-level="1"] { background: #d32f2f; }
 
 .lock-icon {
   font-size: 14px;
+}
+
+.manual-entry-toggle {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  margin-top: 8px;
+  background: transparent;
+  border: 1px dashed #bdbdbd;
+  border-radius: 8px;
+  color: #666;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.manual-entry-toggle:hover {
+  background: #f5f5f5;
+  border-color: #999;
+}
+
+.manual-entry-form {
+  margin-top: 16px;
 }
 
 .success-banner {
@@ -822,7 +925,6 @@ body {
   border-radius: 12px;
   border: 1px solid #a5d6a7;
   text-align: center;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
 }
 
 .success-banner p {
@@ -2377,8 +2479,20 @@ body {
   }
 
   /* WiFi Config Dark Mode */
-  .wifi-config-container {
-    background: linear-gradient(135deg, #263238 0%, #37474f 100%);
+  .wifi-ap-info {
+    color: #e0e0e0;
+  }
+
+  .wifi-section-title {
+    color: #e0e0e0;
+  }
+
+  .wifi-band-note {
+    color: #999;
+  }
+
+  .network-channel {
+    color: #999;
   }
 
   .network-list {
@@ -2389,16 +2503,30 @@ body {
     border-color: #616161;
   }
 
-  .network-item:hover {
+  .network-item-header:hover {
     background: #546e7a;
   }
 
-  .network-item.selected {
-    background: #37474f;
+  .network-ssid {
+    color: #e0e0e0;
   }
 
-  .signal-bar {
+  .expand-arrow {
     color: #bdbdbd;
+  }
+
+  .signal-bar-segment {
+    background: #616161;
+  }
+
+  .manual-entry-toggle {
+    border-color: #616161;
+    color: #bdbdbd;
+  }
+
+  .manual-entry-toggle:hover {
+    background: #546e7a;
+    border-color: #999;
   }
 
   .success-banner {
@@ -2462,6 +2590,23 @@ body {
   }
 
   .theme-toggle:hover {
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  .lang-switcher {
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+
+  .lang-switcher-btn {
+    color: rgba(255, 255, 255, 0.6);
+  }
+
+  .lang-switcher-btn.active {
+    background: var(--primary, #6366f1);
+    color: #fff;
+  }
+
+  .lang-switcher-btn:not(.active):hover {
     background: rgba(255, 255, 255, 0.1);
   }
 

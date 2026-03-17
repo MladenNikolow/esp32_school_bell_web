@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import useLocale from '../../hooks/useLocale.jsx';
 
 const TIMEZONE_OPTIONS = [
   { label: 'UTC (GMT+0)',                           value: 'GMT0' },
@@ -23,6 +24,7 @@ const TIMEZONE_OPTIONS = [
 export { TIMEZONE_OPTIONS };
 
 export default function TimezonePicker({ value, onChange }) {
+  const { t } = useLocale();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [customMode, setCustomMode] = useState(false);
@@ -129,10 +131,10 @@ export default function TimezonePicker({ value, onChange }) {
             placeholder="e.g. CET-1CEST,M3.5.0,M10.5.0/3"
             onKeyDown={(e) => e.key === 'Enter' && handleCustomApply()}
           />
-          <button className="tz-preset-btn" onClick={handleCustomApply}>Apply</button>
-          <button className="tz-preset-btn" onClick={() => setCustomMode(false)}>Presets</button>
+          <button className="tz-preset-btn" onClick={handleCustomApply}>{t('tz.apply')}</button>
+          <button className="tz-preset-btn" onClick={() => setCustomMode(false)}>{t('tz.presets')}</button>
         </div>
-        <span className="field-hint">Enter a POSIX timezone string and click Apply.</span>
+        <span className="field-hint">{t('tz.posixHint')}</span>
       </div>
     );
   }
@@ -149,7 +151,7 @@ export default function TimezonePicker({ value, onChange }) {
         aria-haspopup="listbox"
       >
         <span className="tz-picker-value">
-          {selectedPreset ? selectedPreset.label : isCustom ? `Custom: ${value}` : '— Select timezone —'}
+          {selectedPreset ? selectedPreset.label : isCustom ? t('tz.custom', { value }) : t('tz.selectTimezone')}
         </span>
         <span className="tz-picker-arrow">{open ? '▲' : '▼'}</span>
       </div>
@@ -163,7 +165,7 @@ export default function TimezonePicker({ value, onChange }) {
             value={search}
             onChange={(e) => { setSearch(e.target.value); setHighlightIdx(0); }}
             onKeyDown={handleKeyDown}
-            placeholder="Search timezones..."
+            placeholder={t('tz.searchPlaceholder')}
             autoFocus
           />
           <ul className="tz-picker-list" ref={listRef} role="listbox">
@@ -180,14 +182,14 @@ export default function TimezonePicker({ value, onChange }) {
               </li>
             ))}
             {filtered.length === 0 && (
-              <li className="tz-option tz-option-empty">No matching timezone</li>
+              <li className="tz-option tz-option-empty">{t('tz.noMatch')}</li>
             )}
           </ul>
           <button
             className="tz-custom-btn"
             onClick={() => { setCustomMode(true); setCustomValue(value || ''); setOpen(false); setSearch(''); }}
           >
-            Enter custom POSIX string…
+            {t('tz.enterCustom')}
           </button>
         </div>
       )}
