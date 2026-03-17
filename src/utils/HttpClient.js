@@ -84,7 +84,7 @@ class HttpClient {
    * @returns {Promise<Response>} Fetch response
    */
   async request(url, options = {}) {
-    const { skipAuth = false, ...fetchOptions } = options;
+    const { skipAuth = false, skipAuthErrorHandling = false, ...fetchOptions } = options;
 
     // Prepare headers
     const headers = {
@@ -110,7 +110,7 @@ class HttpClient {
     });
 
     // Handle authentication errors
-    if (response.status === 401 || response.status === 403) {
+    if (!skipAuthErrorHandling && (response.status === 401 || response.status === 403)) {
       // Clear stored token on authentication failure
       TokenManager.clearStoredToken();
       

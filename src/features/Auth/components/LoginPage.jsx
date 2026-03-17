@@ -2,10 +2,13 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { loginUser, clearAuthError } from '../AuthSlice.js';
+import useTheme from '../../../hooks/useTheme.js';
+import RingyLogo from '../../../components/RingyLogo.jsx';
 
 export default function LoginPage() {
   const dispatch = useDispatch();
   const { isLoading, error } = useSelector((state) => state.auth);
+  const { theme, toggleTheme } = useTheme();
   
   const [credentials, setCredentials] = useState({
     username: '',
@@ -66,7 +69,10 @@ export default function LoginPage() {
   return (
     <div className="login-container">
       <div className="login-header">
-        <h1>Ringy Login</h1>
+        <button className="theme-toggle login-theme-toggle" onClick={toggleTheme} title="Toggle dark mode">
+          {theme === 'dark' ? '☀️' : '🌙'}
+        </button>
+        <RingyLogo height="72px" />
       </div>
       
       <div className="login-content">

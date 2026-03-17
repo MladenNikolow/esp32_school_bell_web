@@ -130,7 +130,7 @@ class HttpRequestAgent {
     }
 
     try {
-      const response = await this.httpClient.get(API_CONFIG.ENDPOINTS.VALIDATE_TOKEN);
+      const response = await this.httpClient.get(API_CONFIG.ENDPOINTS.VALIDATE_TOKEN, { skipAuthErrorHandling: true });
       
       if (!response.ok) {
         this.tokenManager.clearStoredToken();
@@ -206,9 +206,11 @@ class HttpRequestAgent {
 
     const contentType = response.headers.get('content-type');
     
-    // Check if response is JSON
+    // Handle non-JSON responses gracefully (e.g. HTML from proxy errors or SPA fallback)
     if (contentType && !contentType.includes('application/json')) {
-      throw new Error(`Unexpected content-type: ${contentType}. Expected application/json`);
+      const body = await response.text().catch(() => '');
+      console.warn(`Non-JSON response (${contentType}) from ${response.url}:`, body.substring(0, 200));
+      throw new Error('Server returned an unexpected response. Please try again.');
     }
 
     try {

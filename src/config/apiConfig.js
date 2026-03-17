@@ -23,6 +23,20 @@ export const API_CONFIG = {
     WIFI_STATUS: '/api/wifi/status',
     WIFI_NETWORKS: '/api/wifi/networks',
     WIFI_CONFIG: '/api/wifi/config',
+
+    // Schedule endpoints
+    SCHEDULE_SETTINGS: '/api/schedule/settings',
+    SCHEDULE_BELLS: '/api/schedule/bells',
+    SCHEDULE_HOLIDAYS: '/api/schedule/holidays',
+    SCHEDULE_EXCEPTIONS: '/api/schedule/exceptions',
+    BELL_STATUS: '/api/bell/status',
+    BELL_PANIC: '/api/bell/panic',
+    BELL_TEST: '/api/bell/test',
+    SYSTEM_TIME: '/api/system/time',
+    SYSTEM_INFO: '/api/system/info',
+    SYSTEM_REBOOT: '/api/system/reboot',
+    SYSTEM_FACTORY_RESET: '/api/system/factory-reset',
+    SCHEDULE_DEFAULTS: '/api/schedule/defaults',
   },
   
   // Public endpoints that don't require authentication

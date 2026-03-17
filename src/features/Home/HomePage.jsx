@@ -1,6 +1,7 @@
 ﻿import React from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { logoutUser } from '../Auth/AuthSlice.js';
+import ScheduleDashboard from '../Schedule/components/ScheduleDashboard.jsx';
 
 export default function HomePage() {
   const dispatch = useDispatch();
@@ -18,7 +19,7 @@ export default function HomePage() {
     <div className="home-container">
       <div className="home-header">
         <div className="header-content">
-          <h1>ESP32 Control Panel</h1>
+          <h1>ESP32 School Bell</h1>
           <div className="user-info">
             <span className="welcome-text">
               Welcome, {user?.username || 'User'}
@@ -35,20 +36,12 @@ export default function HomePage() {
       </div>
 
       <div className="home-content">
-        <div className="info-panel">
-          <h3>Device Information</h3>
-          <div className="info-grid">
-            <div className="info-item">
-              <span className="info-label">User:</span>
-              <span className="info-value">{user?.username || 'Unknown'}</span>
-            </div>
-          </div>
-        </div>
+        <ScheduleDashboard />
       </div>
 
       <div className="home-footer">
         <div className="footer-text">
-          ESP32 Authentication System - Secure Device Control
+          ESP32 School Bell - Schedule Management
         </div>
       </div>
     </div>
