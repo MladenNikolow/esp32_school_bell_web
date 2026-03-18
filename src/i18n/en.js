@@ -55,6 +55,7 @@ const en = {
 
   // Clock
   'clock.synced': 'Synced',
+  'clock.syncedAgo': 'Synced ({minutes}m ago)',
   'clock.notSynced': 'Not Synced',
   'clock.months.0': 'January',
   'clock.months.1': 'February',
@@ -151,6 +152,8 @@ const en = {
   'settings.cpuCores': 'CPU Cores',
   'settings.idfVersion': 'ESP-IDF Version',
   'settings.refresh': '↻ Refresh',
+  'settings.syncNow': '⟳ Sync Time',
+  'settings.syncing': 'Syncing...',
   'settings.systemActions': 'System Actions',
   'settings.reboot': 'Reboot Device',
   'settings.rebootDesc': 'Restart the ESP32. The connection will be lost briefly.',
@@ -184,6 +187,18 @@ const en = {
   'settings.days.4': 'Thu',
   'settings.days.5': 'Fri',
   'settings.days.6': 'Sat',
+
+  // Touchscreen PIN
+  'settings.pinTitle': 'Touchscreen PIN',
+  'settings.pinDesc': 'The 4-digit PIN protects dangerous actions (test bell, panic mode) on the touchscreen.',
+  'settings.pinCurrent': 'Current PIN',
+  'settings.pinChange': 'Change PIN',
+  'settings.pinNew': 'New PIN',
+  'settings.pinConfirm': 'Confirm PIN',
+  'settings.pinPlaceholder': '4 digits',
+  'settings.pinSave': 'Update PIN',
+  'settings.pinInvalidFormat': 'PIN must be exactly 4 digits.',
+  'settings.pinMismatch': 'PINs do not match.',
 
   // Calendar
   'calendar.holidays': 'Holidays',

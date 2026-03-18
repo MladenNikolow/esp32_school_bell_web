@@ -23,6 +23,27 @@ export const factoryReset = createAsyncThunk(
   async () => ScheduleService.factoryReset()
 );
 
+export const syncTime = createAsyncThunk(
+  'settings/syncTime',
+  async () => ScheduleService.syncTime()
+);
+
+export const fetchPin = createAsyncThunk(
+  'settings/fetchPin',
+  async () => {
+    const data = await httpRequestAgent.get(API_CONFIG.ENDPOINTS.SYSTEM_PIN);
+    return data.pin;
+  }
+);
+
+export const savePin = createAsyncThunk(
+  'settings/savePin',
+  async (pin) => {
+    const data = await httpRequestAgent.post(API_CONFIG.ENDPOINTS.SYSTEM_PIN, { pin });
+    return data;
+  }
+);
+
 export const scanWifiNetworks = createAsyncThunk(
   'settings/scanWifiNetworks',
   async () => {
@@ -52,6 +73,10 @@ const settingsSlice = createSlice({
     wifiNetworks: [],
     wifiScanning: false,
     wifiSaving: false,
+    syncing: false,
+    currentPin: null,
+    pinLoading: false,
+    pinSaving: false,
   },
   reducers: {
     clearError: (state) => { state.error = null; },
@@ -94,6 +119,33 @@ const settingsSlice = createSlice({
       })
       .addCase(factoryReset.rejected, (state, { error }) => {
         state.resetting = false;
+        state.error = error.message;
+      })
+      .addCase(syncTime.pending, (state) => { state.syncing = true; })
+      .addCase(syncTime.fulfilled, (state) => {
+        state.syncing = false;
+        state.actionSuccess = 'Time sync triggered';
+      })
+      .addCase(syncTime.rejected, (state, { error }) => {
+        state.syncing = false;
+        state.error = error.message;
+      })
+      .addCase(fetchPin.pending, (state) => { state.pinLoading = true; })
+      .addCase(fetchPin.fulfilled, (state, { payload }) => {
+        state.pinLoading = false;
+        state.currentPin = payload;
+      })
+      .addCase(fetchPin.rejected, (state, { error }) => {
+        state.pinLoading = false;
+        if (error.name !== 'AbortError') state.error = error.message;
+      })
+      .addCase(savePin.pending, (state) => { state.pinSaving = true; })
+      .addCase(savePin.fulfilled, (state) => {
+        state.pinSaving = false;
+        state.actionSuccess = 'PIN updated successfully';
+      })
+      .addCase(savePin.rejected, (state, { error }) => {
+        state.pinSaving = false;
         state.error = error.message;
       })
       .addCase(scanWifiNetworks.pending, (state) => {

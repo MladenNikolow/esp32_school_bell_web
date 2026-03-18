@@ -55,6 +55,7 @@ const bg = {
 
   // Clock
   'clock.synced': 'Синхронизиран',
+  'clock.syncedAgo': 'Синхрон. (преди {minutes}м)',
   'clock.notSynced': 'Не е синхронизиран',
   'clock.months.0': 'Януари',
   'clock.months.1': 'Февруари',
@@ -151,6 +152,8 @@ const bg = {
   'settings.cpuCores': 'CPU ядра',
   'settings.idfVersion': 'ESP-IDF версия',
   'settings.refresh': '↻ Обнови',
+  'settings.syncNow': '⟳ Синхронизирай',
+  'settings.syncing': 'Синхронизиране...',
   'settings.systemActions': 'Системни действия',
   'settings.reboot': 'Рестартиране',
   'settings.rebootDesc': 'Рестартирайте ESP32. Връзката ще бъде прекъсната за кратко.',
@@ -184,6 +187,18 @@ const bg = {
   'settings.days.4': 'Чет',
   'settings.days.5': 'Пет',
   'settings.days.6': 'Съб',
+
+  // Touchscreen PIN
+  'settings.pinTitle': 'ПИН за тъчскрийн',
+  'settings.pinDesc': '4-цифреният ПИН защитава опасни действия (тест на звънеца, паник режим) от тъчскрийна.',
+  'settings.pinCurrent': 'Текущ ПИН',
+  'settings.pinChange': 'Смяна на ПИН',
+  'settings.pinNew': 'Нов ПИН',
+  'settings.pinConfirm': 'Потвърди ПИН',
+  'settings.pinPlaceholder': '4 цифри',
+  'settings.pinSave': 'Промени ПИН',
+  'settings.pinInvalidFormat': 'ПИН-ът трябва да е точно 4 цифри.',
+  'settings.pinMismatch': 'ПИН-овете не съвпадат.',
 
   // Calendar
   'calendar.holidays': 'Празници',

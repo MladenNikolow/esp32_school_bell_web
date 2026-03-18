@@ -66,6 +66,10 @@ const ScheduleService = {
   factoryReset: (signal) =>
     agent.post(API_CONFIG.ENDPOINTS.SYSTEM_FACTORY_RESET, {}, signal),
 
+  // Force NTP time sync
+  syncTime: (signal) =>
+    agent.post(API_CONFIG.ENDPOINTS.SYSTEM_SYNC_TIME, {}, signal),
+
   // Defaults
   getDefaults: (signal) =>
     agent.get(API_CONFIG.ENDPOINTS.SCHEDULE_DEFAULTS, signal),

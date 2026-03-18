@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, memo } from 'react';
 import useLocale from '../../hooks/useLocale.jsx';
 
-function DeviceClock({ serverTime, serverDate, timeSynced, dayOfWeek, dayType, dayTypeLabel }) {
+function DeviceClock({ serverTime, serverDate, timeSynced, lastSyncAgeSec, dayOfWeek, dayType, dayTypeLabel }) {
   const { t } = useLocale();
 
   function formatDateLong(dateStr, dow) {
@@ -69,7 +69,11 @@ function DeviceClock({ serverTime, serverDate, timeSynced, dayOfWeek, dayType, d
         <div className="today-date-full">{formattedDate || '—'}</div>
         <div className={`sync-indicator ${timeSynced ? 'synced' : 'not-synced'}`}>
           <span className="sync-dot"></span>
-          {timeSynced ? t('clock.synced') : t('clock.notSynced')}
+          {timeSynced
+            ? (lastSyncAgeSec != null && lastSyncAgeSec < 4294967295
+                ? t('clock.syncedAgo', { minutes: Math.floor(lastSyncAgeSec / 60) })
+                : t('clock.synced'))
+            : t('clock.notSynced')}
         </div>
       </div>
       <div className="today-clock">{display.time}</div>

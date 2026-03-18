@@ -23,6 +23,7 @@ const dashboardSlice = createSlice({
     panicMode: false,
     dayType: 'off',
     timeSynced: false,
+    lastSyncAgeSec: null,
     currentTime: '--:--:--',
     currentDate: '',
     nextBell: null,
@@ -40,6 +41,7 @@ const dashboardSlice = createSlice({
         state.panicMode = payload.panicMode;
         state.dayType = payload.dayType;
         state.timeSynced = payload.timeSynced;
+        state.lastSyncAgeSec = payload.lastSyncAgeSec ?? null;
         state.currentTime = payload.currentTime;
         state.currentDate = payload.currentDate;
         state.nextBell = payload.nextBell;

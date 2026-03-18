@@ -7,8 +7,9 @@ import {
   clearSaveSuccess,
 } from '../Schedule/ScheduleSlice.js';
 import {
-  fetchSystemInfo, testBell, rebootDevice, factoryReset,
+  fetchSystemInfo, testBell, rebootDevice, factoryReset, syncTime,
   scanWifiNetworks, saveWifiCredentials,
+  fetchPin, savePin,
   clearError, clearActionSuccess,
 } from './SettingsSlice.js';
 import TokenManager from '../../utils/TokenManager.js';
@@ -47,8 +48,9 @@ export default function SettingsPage() {
   const scheduleError = useSelector((s) => s.schedule.error);
 
   /* Settings state (system info, actions) */
-  const { systemInfo, testingBell, rebooting, resetting, error, actionSuccess,
-    wifiNetworks, wifiScanning, wifiSaving } =
+  const { systemInfo, testingBell, rebooting, resetting, syncing, error, actionSuccess,
+    wifiNetworks, wifiScanning, wifiSaving,
+    currentPin, pinLoading, pinSaving } =
     useSelector((s) => s.settings);
 
   const [testDuration, setTestDuration] = useState(3);
@@ -56,10 +58,15 @@ export default function SettingsPage() {
   const [wifiPassword, setWifiPassword] = useState('');
   const [showWifiPassword, setShowWifiPassword] = useState(false);
   const [wifiExpanded, setWifiExpanded] = useState(null);
+  const [newPin, setNewPin] = useState('');
+  const [confirmPin, setConfirmPin] = useState('');
+  const [showPin, setShowPin] = useState(false);
+  const [pinError, setPinError] = useState('');
 
   useEffect(() => {
     dispatch(fetchSettings());
     dispatch(fetchSystemInfo());
+    dispatch(fetchPin());
   }, [dispatch]);
 
   useEffect(() => {
@@ -138,6 +145,25 @@ export default function SettingsPage() {
         // Reload fresh data from device after reset
         dispatch(fetchSettings());
         dispatch(fetchSystemInfo());
+      }
+    });
+  };
+
+  const handleSavePin = () => {
+    setPinError('');
+    if (!/^\d{4}$/.test(newPin)) {
+      setPinError(t('settings.pinInvalidFormat'));
+      return;
+    }
+    if (newPin !== confirmPin) {
+      setPinError(t('settings.pinMismatch'));
+      return;
+    }
+    dispatch(savePin(newPin)).then((result) => {
+      if (result.meta.requestStatus === 'fulfilled') {
+        setNewPin('');
+        setConfirmPin('');
+        dispatch(fetchPin());
       }
     });
   };
@@ -224,6 +250,70 @@ export default function SettingsPage() {
         >
           {testingBell ? t('settings.testRinging') : t('settings.testBell')}
         </button>
+      </div>
+
+      {/* Touchscreen PIN */}
+      <div className="sched-card">
+        <h3>{t('settings.pinTitle')}</h3>
+        <p className="card-desc">{t('settings.pinDesc')}</p>
+
+        <div className="settings-section">
+          <div className="settings-row">
+            <label className="form-label">{t('settings.pinCurrent')}</label>
+            <span className="info-value">
+              {pinLoading ? '...' : (showPin ? (currentPin || '—') : '••••')}
+              <button
+                type="button"
+                className="password-toggle"
+                onClick={() => setShowPin(!showPin)}
+                style={{ marginLeft: 8 }}
+              >
+                {showPin ? '👁️' : '👁️‍🗨️'}
+              </button>
+            </span>
+          </div>
+        </div>
+
+        <div className="settings-section" style={{ borderBottom: 'none', marginBottom: 0 }}>
+          <h4>{t('settings.pinChange')}</h4>
+          {pinError && <div className="error-message" style={{ marginBottom: 8 }}>{pinError}</div>}
+          <div className="settings-row">
+            <label className="form-label">{t('settings.pinNew')}</label>
+            <input
+              type="text"
+              className="form-input"
+              inputMode="numeric"
+              pattern="\d{4}"
+              maxLength={4}
+              value={newPin}
+              onChange={(e) => { setNewPin(e.target.value.replace(/\D/g, '').slice(0, 4)); setPinError(''); }}
+              placeholder={t('settings.pinPlaceholder')}
+              disabled={pinSaving}
+            />
+          </div>
+          <div className="settings-row">
+            <label className="form-label">{t('settings.pinConfirm')}</label>
+            <input
+              type="text"
+              className="form-input"
+              inputMode="numeric"
+              pattern="\d{4}"
+              maxLength={4}
+              value={confirmPin}
+              onChange={(e) => { setConfirmPin(e.target.value.replace(/\D/g, '').slice(0, 4)); setPinError(''); }}
+              placeholder={t('settings.pinPlaceholder')}
+              disabled={pinSaving}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleSavePin(); }}
+            />
+          </div>
+          <button
+            className="save-button"
+            onClick={handleSavePin}
+            disabled={pinSaving || newPin.length !== 4 || confirmPin.length !== 4}
+          >
+            {pinSaving ? t('settings.saving') : t('settings.pinSave')}
+          </button>
+        </div>
       </div>
 
       {/* WiFi Credentials */}
@@ -362,6 +452,9 @@ export default function SettingsPage() {
             <span className="info-label">{t('settings.sntpStatus')}</span>
             <span className={`info-value ${systemInfo && !systemInfo.timeSynced ? 'text-warn' : ''}`}>
               {systemInfo ? (systemInfo.timeSynced ? t('settings.synchronized') : t('settings.notSynchronized')) : '—'}
+              {systemInfo?.lastSyncAgeSec != null && systemInfo.lastSyncAgeSec < 4294967295
+                ? ` (${Math.floor(systemInfo.lastSyncAgeSec / 60)}m ago)`
+                : ''}
             </span>
           </div>
           <div className="info-item">
@@ -390,13 +483,21 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        <button
-          className="refresh-btn"
-          onClick={() => dispatch(fetchSystemInfo())}
-          style={{ marginTop: 16 }}
-        >
-          {t('settings.refresh')}
-        </button>
+        <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
+          <button
+            className="refresh-btn"
+            onClick={() => dispatch(fetchSystemInfo())}
+          >
+            {t('settings.refresh')}
+          </button>
+          <button
+            className="refresh-btn"
+            onClick={() => { dispatch(syncTime()).then(() => dispatch(fetchSystemInfo())); }}
+            disabled={syncing}
+          >
+            {syncing ? t('settings.syncing') : t('settings.syncNow')}
+          </button>
+        </div>
       </div>
 
       {/* System Actions */}

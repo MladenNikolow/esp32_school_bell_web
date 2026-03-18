@@ -12,7 +12,7 @@ const BELL_STATE_CLASS = {
 
 export default function DashboardPage() {
   const dispatch = useDispatch();
-  const { bellState, panicMode, dayType, timeSynced, currentTime, currentDate, nextBell, error } =
+  const { bellState, panicMode, dayType, timeSynced, lastSyncAgeSec, currentTime, currentDate, nextBell, error } =
     useSelector((s) => s.dashboard);
   const { t } = useLocale();
   const [confirmPanic, setConfirmPanic] = useState(false);
@@ -24,7 +24,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     refresh();
-    intervalRef.current = setInterval(refresh, 1000);
+    intervalRef.current = setInterval(refresh, 5000);
     return () => clearInterval(intervalRef.current);
   }, [refresh]);
 
@@ -66,6 +66,7 @@ export default function DashboardPage() {
           serverTime={currentTime}
           serverDate={currentDate}
           timeSynced={timeSynced}
+          lastSyncAgeSec={lastSyncAgeSec}
           dayOfWeek={dayOfWeek}
           dayType={dayType}
           dayTypeLabel={t(`dayType.${dayType}`) || dayType}
