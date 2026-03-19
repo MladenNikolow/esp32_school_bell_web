@@ -166,7 +166,7 @@ export default function SchedulePage() {
   const dispatch = useDispatch();
   const { firstShift, secondShift, loading, saving, error, saveSuccess } =
     useSelector((s) => s.schedule);
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
 
   const [showAutoGen, setShowAutoGen] = useState(false);
   const [autoConfig, setAutoConfig] = useState({
@@ -179,10 +179,43 @@ export default function SchedulePage() {
     bellDuration: 3,
   });
 
+  /* Translate known default bell labels (English or Bulgarian patterns) to current locale */
+  const translateDefaultLabels = (bells) => (bells || []).map((b) => {
+    if (!b.label) return b;
+    const mEn = b.label.match(/^Class (\d+) (start|end)$/);
+    if (mEn) {
+      const key = mEn[2] === 'start' ? 'schedule.classStart' : 'schedule.classEnd';
+      return { ...b, label: t(key, { n: parseInt(mEn[1], 10) }) };
+    }
+    const mBg = b.label.match(/^Час (\d+) (начало|край)$/);
+    if (mBg) {
+      const key = mBg[2] === 'начало' ? 'schedule.classStart' : 'schedule.classEnd';
+      return { ...b, label: t(key, { n: parseInt(mBg[1], 10) }) };
+    }
+    return b;
+  });
+
   useEffect(() => {
     dispatch(fetchSettings());
-    dispatch(fetchBells());
+    dispatch(fetchBells()).then((result) => {
+      if (result.meta.requestStatus === 'fulfilled') {
+        const fs = result.payload.firstShift;
+        const ss = result.payload.secondShift;
+        if (fs) dispatch(setFirstShift({ enabled: fs.enabled !== false, bells: translateDefaultLabels(fs.bells) }));
+        if (ss) dispatch(setSecondShift({ enabled: ss.enabled === true, bells: translateDefaultLabels(ss.bells) }));
+      }
+    });
   }, [dispatch]);
+
+  /* Re-translate default labels when the user switches language */
+  useEffect(() => {
+    if (firstShift.bells.length > 0) {
+      dispatch(setFirstShift({ ...firstShift, bells: translateDefaultLabels(firstShift.bells) }));
+    }
+    if (secondShift.bells.length > 0) {
+      dispatch(setSecondShift({ ...secondShift, bells: translateDefaultLabels(secondShift.bells) }));
+    }
+  }, [locale]);
 
   useEffect(() => {
     if (saveSuccess) {
@@ -197,7 +230,14 @@ export default function SchedulePage() {
 
   const handleResetDefaults = () => {
     if (!window.confirm(t('schedule.resetConfirm'))) return;
-    dispatch(fetchDefaults());
+    dispatch(fetchDefaults()).then((result) => {
+      if (result.meta.requestStatus === 'fulfilled') {
+        const fs = result.payload.firstShift;
+        const ss = result.payload.secondShift;
+        dispatch(setFirstShift({ enabled: fs?.enabled !== false, bells: translateDefaultLabels(fs?.bells) }));
+        dispatch(setSecondShift({ enabled: ss?.enabled === true, bells: translateDefaultLabels(ss?.bells) }));
+      }
+    });
   };
 
   const updateAutoField = (field, value) => {
@@ -277,128 +317,152 @@ export default function SchedulePage() {
           <div className="auto-generate-form auto-generate-unified">
             <p className="auto-hint">{t('auto.hint')}</p>
 
-            <div className="auto-shift-columns">
-              <div className="auto-shift-col">
-                <h5>{t('auto.firstShift')}</h5>
-                <div className="auto-form-row">
-                  <label>{t('auto.startTime')}</label>
-                  <input
-                    type="time"
-                    className="time-input"
-                    value={`${String(autoConfig.firstStartHour).padStart(2, '0')}:${String(autoConfig.firstStartMinute).padStart(2, '0')}`}
-                    onChange={(e) => {
-                      const [h, m] = e.target.value.split(':').map(Number);
-                      setAutoConfig(prev => ({ ...prev, firstStartHour: h, firstStartMinute: m }));
-                    }}
-                  />
+            <h5>{t('auto.sharedSettings')}</h5>
+            <div className="auto-settings-grid">
+              <div className="auto-setting-card">
+                <label>{t('auto.classDuration')}</label>
+                <div className="auto-setting-value">
+                  <span className="auto-val">{autoConfig.classDuration}</span>
+                  <span className="auto-unit">min</span>
                 </div>
-                <div className="auto-form-row">
-                  <label>{t('auto.numClasses')}</label>
-                  <input
-                    type="number"
-                    className="duration-input"
-                    min="0"
-                    max="20"
-                    value={autoConfig.firstClassCount}
-                    onChange={(e) => updateAutoField('firstClassCount', Math.min(20, Math.max(0, parseInt(e.target.value) || 0)))}
-                  />
+                <input
+                  type="range" className="auto-slider" min="5" max="120"
+                  value={autoConfig.classDuration}
+                  onChange={(e) => updateAutoField('classDuration', parseInt(e.target.value))}
+                />
+              </div>
+              <div className="auto-setting-card">
+                <label>{t('auto.breakDuration')}</label>
+                <div className="auto-setting-value">
+                  <span className="auto-val">{autoConfig.breakDuration}</span>
+                  <span className="auto-unit">min</span>
+                </div>
+                <input
+                  type="range" className="auto-slider" min="0" max="60"
+                  value={autoConfig.breakDuration}
+                  onChange={(e) => updateAutoField('breakDuration', parseInt(e.target.value))}
+                />
+              </div>
+              <div className="auto-setting-card">
+                <label>{t('auto.bigBreakDuration')}</label>
+                <div className="auto-setting-value">
+                  <span className="auto-val">{autoConfig.bigBreakDuration}</span>
+                  <span className="auto-unit">min</span>
+                </div>
+                <input
+                  type="range" className="auto-slider" min="0" max="60"
+                  value={autoConfig.bigBreakDuration}
+                  onChange={(e) => updateAutoField('bigBreakDuration', parseInt(e.target.value))}
+                />
+              </div>
+              <div className="auto-setting-card">
+                <label>{t('auto.bigBreakAfterClass')}</label>
+                <div className="auto-setting-value">
+                  <span className="auto-val">{autoConfig.bigBreakAfterClass}</span>
+                </div>
+                <input
+                  type="range" className="auto-slider" min="1" max="19"
+                  value={autoConfig.bigBreakAfterClass}
+                  onChange={(e) => updateAutoField('bigBreakAfterClass', parseInt(e.target.value))}
+                />
+              </div>
+              <div className="auto-setting-card">
+                <label>{t('auto.bellRingDuration')}</label>
+                <div className="auto-setting-value">
+                  <span className="auto-val">{autoConfig.bellDuration}</span>
+                  <span className="auto-unit">sec</span>
+                </div>
+                <input
+                  type="range" className="auto-slider" min="1" max="300"
+                  value={autoConfig.bellDuration}
+                  onChange={(e) => updateAutoField('bellDuration', parseInt(e.target.value))}
+                />
+              </div>
+            </div>
+
+            <h5>{t('auto.shifts')}</h5>
+            <div className="auto-shift-columns">
+              <div className="auto-shift-card">
+                <div className="auto-shift-header">{t('auto.firstShift')}</div>
+                <div className="auto-shift-fields">
+                  <div className="auto-shift-field">
+                    <label>{t('auto.startTime')}</label>
+                    <input
+                      type="time"
+                      className="time-input"
+                      value={`${String(autoConfig.firstStartHour).padStart(2, '0')}:${String(autoConfig.firstStartMinute).padStart(2, '0')}`}
+                      onChange={(e) => {
+                        const [h, m] = e.target.value.split(':').map(Number);
+                        setAutoConfig(prev => ({ ...prev, firstStartHour: h, firstStartMinute: m }));
+                      }}
+                    />
+                  </div>
+                  <div className="auto-shift-field">
+                    <label>{t('auto.numClasses')}</label>
+                    <input
+                      type="number"
+                      className="duration-input"
+                      min="0"
+                      max="20"
+                      value={autoConfig.firstClassCount}
+                      onChange={(e) => updateAutoField('firstClassCount', Math.min(20, Math.max(0, parseInt(e.target.value) || 0)))}
+                    />
+                  </div>
                 </div>
                 {autoConfig.firstClassCount > 0 && (
                   <div className="auto-generate-preview">
                     <span className="preview-label">{t('auto.preview')}</span>
-                    <span>
-                      {autoConfig.firstClassCount} {t('auto.classes')},{' '}
-                      {String(autoConfig.firstStartHour).padStart(2, '0')}:{String(autoConfig.firstStartMinute).padStart(2, '0')}{' '}
-                      – {previewEndTime(autoConfig.firstStartHour, autoConfig.firstStartMinute, autoConfig.firstClassCount)}
-                    </span>
+                    {autoConfig.firstClassCount} {t('auto.classes')},{' '}
+                    {String(autoConfig.firstStartHour).padStart(2, '0')}:{String(autoConfig.firstStartMinute).padStart(2, '0')}{' '}
+                    – {previewEndTime(autoConfig.firstStartHour, autoConfig.firstStartMinute, autoConfig.firstClassCount)}
                   </div>
                 )}
               </div>
 
-              <div className="auto-shift-col">
-                <h5>{t('auto.secondShift')}</h5>
-                <div className="auto-form-row">
-                  <label>{t('auto.startTime')}</label>
-                  <input
-                    type="time"
-                    className="time-input"
-                    value={`${String(autoConfig.secondStartHour).padStart(2, '0')}:${String(autoConfig.secondStartMinute).padStart(2, '0')}`}
-                    onChange={(e) => {
-                      const [h, m] = e.target.value.split(':').map(Number);
-                      setAutoConfig(prev => ({ ...prev, secondStartHour: h, secondStartMinute: m }));
-                    }}
-                  />
-                </div>
-                <div className="auto-form-row">
-                  <label>{t('auto.numClasses')}</label>
-                  <input
-                    type="number"
-                    className="duration-input"
-                    min="0"
-                    max="20"
-                    value={autoConfig.secondClassCount}
-                    onChange={(e) => updateAutoField('secondClassCount', Math.min(20, Math.max(0, parseInt(e.target.value) || 0)))}
-                  />
+              <div className="auto-shift-card">
+                <div className="auto-shift-header">{t('auto.secondShift')}</div>
+                <div className="auto-shift-fields">
+                  <div className="auto-shift-field">
+                    <label>{t('auto.startTime')}</label>
+                    <input
+                      type="time"
+                      className="time-input"
+                      value={`${String(autoConfig.secondStartHour).padStart(2, '0')}:${String(autoConfig.secondStartMinute).padStart(2, '0')}`}
+                      onChange={(e) => {
+                        const [h, m] = e.target.value.split(':').map(Number);
+                        setAutoConfig(prev => ({ ...prev, secondStartHour: h, secondStartMinute: m }));
+                      }}
+                    />
+                  </div>
+                  <div className="auto-shift-field">
+                    <label>{t('auto.numClasses')}</label>
+                    <input
+                      type="number"
+                      className="duration-input"
+                      min="0"
+                      max="20"
+                      value={autoConfig.secondClassCount}
+                      onChange={(e) => updateAutoField('secondClassCount', Math.min(20, Math.max(0, parseInt(e.target.value) || 0)))}
+                    />
+                  </div>
                 </div>
                 {autoConfig.secondClassCount > 0 && (
                   <div className="auto-generate-preview">
                     <span className="preview-label">{t('auto.preview')}</span>
-                    <span>
-                      {autoConfig.secondClassCount} {t('auto.classes')},{' '}
-                      {String(autoConfig.secondStartHour).padStart(2, '0')}:{String(autoConfig.secondStartMinute).padStart(2, '0')}{' '}
-                      – {previewEndTime(autoConfig.secondStartHour, autoConfig.secondStartMinute, autoConfig.secondClassCount)}
-                    </span>
+                    {autoConfig.secondClassCount} {t('auto.classes')},{' '}
+                    {String(autoConfig.secondStartHour).padStart(2, '0')}:{String(autoConfig.secondStartMinute).padStart(2, '0')}{' '}
+                    – {previewEndTime(autoConfig.secondStartHour, autoConfig.secondStartMinute, autoConfig.secondClassCount)}
                   </div>
                 )}
               </div>
             </div>
 
-            <h5>{t('auto.sharedSettings')}</h5>
-            <div className="auto-form-row">
-              <label>{t('auto.classDuration')}</label>
-              <input
-                type="number" className="duration-input" min="5" max="120"
-                value={autoConfig.classDuration}
-                onChange={(e) => updateAutoField('classDuration', Math.max(1, parseInt(e.target.value) || 5))}
-              />
+            <div className="auto-generate-footer">
+              <p className="auto-warning">{t('auto.replaceWarning')}</p>
+              <button className="add-btn generate-btn" onClick={handleAutoGenerate}>
+                {t('auto.generateApply')}
+              </button>
             </div>
-            <div className="auto-form-row">
-              <label>{t('auto.breakDuration')}</label>
-              <input
-                type="number" className="duration-input" min="0" max="60"
-                value={autoConfig.breakDuration}
-                onChange={(e) => updateAutoField('breakDuration', Math.max(0, parseInt(e.target.value) || 0))}
-              />
-            </div>
-            <div className="auto-form-row">
-              <label>{t('auto.bigBreakDuration')}</label>
-              <input
-                type="number" className="duration-input" min="0" max="60"
-                value={autoConfig.bigBreakDuration}
-                onChange={(e) => updateAutoField('bigBreakDuration', Math.max(0, parseInt(e.target.value) || 0))}
-              />
-            </div>
-            <div className="auto-form-row">
-              <label>{t('auto.bigBreakAfterClass')}</label>
-              <input
-                type="number" className="duration-input" min="1" max="19"
-                value={autoConfig.bigBreakAfterClass}
-                onChange={(e) => updateAutoField('bigBreakAfterClass', Math.max(1, parseInt(e.target.value) || 1))}
-              />
-            </div>
-            <div className="auto-form-row">
-              <label>{t('auto.bellRingDuration')}</label>
-              <input
-                type="number" className="duration-input" min="1" max="300"
-                value={autoConfig.bellDuration}
-                onChange={(e) => updateAutoField('bellDuration', Math.min(300, Math.max(1, parseInt(e.target.value) || 1)))}
-              />
-            </div>
-
-            <button className="add-btn generate-btn" onClick={handleAutoGenerate}>
-              {t('auto.generateApply')}
-            </button>
-            <p className="auto-hint">{t('auto.replaceWarning')}</p>
           </div>
         )}
 

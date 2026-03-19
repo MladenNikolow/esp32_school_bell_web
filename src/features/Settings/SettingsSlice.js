@@ -97,7 +97,6 @@ const settingsSlice = createSlice({
       .addCase(testBell.pending, (state) => { state.testingBell = true; })
       .addCase(testBell.fulfilled, (state) => {
         state.testingBell = false;
-        state.actionSuccess = 'Bell test started';
       })
       .addCase(testBell.rejected, (state, { error }) => {
         state.testingBell = false;

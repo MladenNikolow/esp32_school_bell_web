@@ -40,6 +40,12 @@ const bg = {
   'dashboard.confirmPanicMsg': 'Звънецът ще звъни непрекъснато, докато не бъде спрян ръчно. Продължаване?',
   'dashboard.cancel': 'Отказ',
   'dashboard.activate': 'Активирай',
+  'dashboard.activateBell': 'Активирай звънеца',
+  'dashboard.activateBellDesc': 'Пуснете звънеца ръчно, за да проверите връзката.',
+  'dashboard.bellRinging': 'Звъни...',
+  'dashboard.bellActivated': 'Звънецът е активиран успешно!',
+  'dashboard.bellError': 'Грешка при активиране на звънеца. Опитайте отново.',
+  'dashboard.testDuration': 'Продължителност',
 
   // Day types
   'dayType.off': 'Уикенд',
@@ -52,6 +58,14 @@ const bg = {
   'bellState.idle': 'Изчакване',
   'bellState.ringing': 'Звъни',
   'bellState.panic': 'АВАРИЯ',
+
+  // Status panel
+  'statusPanel.bellState': 'Състояние',
+  'statusPanel.dayType': 'Тип ден',
+  'statusPanel.deviceTime': 'Час на устройството',
+  'statusPanel.nextBell': 'Следващ звънец',
+  'statusPanel.panic': 'АВАРИЯ',
+  'statusPanel.stopPanic': 'СПРИ АВАРИЯ',
 
   // Clock
   'clock.synced': 'Синхронизиран',
@@ -115,15 +129,18 @@ const bg = {
   'auto.numClasses': 'Брой часове',
   'auto.preview': 'Преглед:',
   'auto.classes': 'часа',
-  'auto.sharedSettings': 'Общи настройки',
-  'auto.classDuration': 'Продължителност на час (мин)',
-  'auto.breakDuration': 'Междучасие (мин)',
-  'auto.bigBreakDuration': 'Голямо междучасие (мин)',
-  'auto.bigBreakAfterClass': 'Голямо междучасие след час',
-  'auto.bellRingDuration': 'Продължителност на звънене (сек)',
+  'auto.sharedSettings': 'Времена',
+  'auto.classDuration': 'Учебен час',
+  'auto.breakDuration': 'Междучасие',
+  'auto.bigBreakDuration': 'Голямо междучасие',
+  'auto.bigBreakAfterClass': 'Голямо след час',
+  'auto.bellRingDuration': 'Звънене',
+  'auto.shifts': 'Смени',
   'auto.generateApply': 'Генерирай и приложи',
   'auto.replaceWarning': 'Това ще замени всички текущи звънци и в двете смени.',
   'auto.period': 'Час {n}',
+  'schedule.classStart': 'Час {n} начало',
+  'schedule.classEnd': 'Час {n} край',
 
   // Settings
   'settings.generalSettings': 'Общи настройки',
@@ -154,6 +171,8 @@ const bg = {
   'settings.refresh': '↻ Обнови',
   'settings.syncNow': '⟳ Синхронизирай',
   'settings.syncing': 'Синхронизиране...',
+  'settings.timeSection': 'Синхронизация на времето',
+  'settings.timeSectionDesc': 'Стартирайте ръчна SNTP синхронизация на времето с конфигурирания сървър.',
   'settings.systemActions': 'Системни действия',
   'settings.reboot': 'Рестартиране',
   'settings.rebootDesc': 'Рестартирайте ESP32. Връзката ще бъде прекъсната за кратко.',
@@ -190,14 +209,14 @@ const bg = {
 
   // Touchscreen PIN
   'settings.pinTitle': 'ПИН за тъчскрийн',
-  'settings.pinDesc': '4-цифреният ПИН защитава опасни действия (тест на звънеца, паник режим) от тъчскрийна.',
+  'settings.pinDesc': 'ПИН-ът (4–6 цифри) защитава опасни действия (тест на звънеца, паник режим) от тъчскрийна.',
   'settings.pinCurrent': 'Текущ ПИН',
   'settings.pinChange': 'Смяна на ПИН',
   'settings.pinNew': 'Нов ПИН',
   'settings.pinConfirm': 'Потвърди ПИН',
-  'settings.pinPlaceholder': '4 цифри',
+  'settings.pinPlaceholder': '4–6 цифри',
   'settings.pinSave': 'Промени ПИН',
-  'settings.pinInvalidFormat': 'ПИН-ът трябва да е точно 4 цифри.',
+  'settings.pinInvalidFormat': 'ПИН-ът трябва да е от 4 до 6 цифри.',
   'settings.pinMismatch': 'ПИН-овете не съвпадат.',
 
   // Calendar

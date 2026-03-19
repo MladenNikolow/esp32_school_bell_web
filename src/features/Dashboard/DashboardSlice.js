@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import ScheduleService from '../../services/ScheduleService.js';
+import { testBell } from '../Settings/SettingsSlice.js';
 
 export const fetchBellStatus = createAsyncThunk(
   'dashboard/fetchBellStatus',
@@ -61,6 +62,11 @@ const dashboardSlice = createSlice({
       })
       .addCase(togglePanic.rejected, (state, { error }) => {
         state.error = error.message;
+      })
+      .addCase(testBell.fulfilled, (state) => {
+        if (state.bellState !== 'panic') {
+          state.bellState = 'ringing';
+        }
       });
   },
 });

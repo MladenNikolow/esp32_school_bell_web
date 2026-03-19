@@ -7,7 +7,7 @@ import {
   clearSaveSuccess,
 } from '../Schedule/ScheduleSlice.js';
 import {
-  fetchSystemInfo, testBell, rebootDevice, factoryReset, syncTime,
+  fetchSystemInfo, rebootDevice, factoryReset, syncTime,
   scanWifiNetworks, saveWifiCredentials,
   fetchPin, savePin,
   clearError, clearActionSuccess,
@@ -48,19 +48,17 @@ export default function SettingsPage() {
   const scheduleError = useSelector((s) => s.schedule.error);
 
   /* Settings state (system info, actions) */
-  const { systemInfo, testingBell, rebooting, resetting, syncing, error, actionSuccess,
+  const { systemInfo, rebooting, resetting, syncing, error, actionSuccess,
     wifiNetworks, wifiScanning, wifiSaving,
     currentPin, pinLoading, pinSaving } =
     useSelector((s) => s.settings);
 
-  const [testDuration, setTestDuration] = useState(3);
   const [wifiSsid, setWifiSsid] = useState('');
   const [wifiPassword, setWifiPassword] = useState('');
   const [showWifiPassword, setShowWifiPassword] = useState(false);
   const [wifiExpanded, setWifiExpanded] = useState(null);
   const [newPin, setNewPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
-  const [showPin, setShowPin] = useState(false);
   const [pinError, setPinError] = useState('');
 
   useEffect(() => {
@@ -92,10 +90,6 @@ export default function SettingsPage() {
 
   const handleSaveSettings = () => {
     dispatch(saveSettings({ timezone, workingDays }));
-  };
-
-  const handleTestBell = () => {
-    dispatch(testBell(testDuration));
   };
 
   const handleScanWifi = () => {
@@ -151,7 +145,7 @@ export default function SettingsPage() {
 
   const handleSavePin = () => {
     setPinError('');
-    if (!/^\d{4}$/.test(newPin)) {
+    if (!/^\d{4,6}$/.test(newPin)) {
       setPinError(t('settings.pinInvalidFormat'));
       return;
     }
@@ -218,37 +212,8 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        <button className="save-button" onClick={handleSaveSettings} disabled={savingSchedule}>
+        <button className={`save-button${savingSchedule ? ' loading' : ''}`} onClick={handleSaveSettings} disabled={savingSchedule}>
           {savingSchedule ? t('settings.saving') : t('settings.saveSettings')}
-        </button>
-      </div>
-
-      {/* Bell Test */}
-      <div className="sched-card">
-        <h3>{t('settings.bellTest')}</h3>
-        <p className="card-desc">{t('settings.bellTestDesc')}</p>
-
-        <div className="settings-row">
-          <label className="form-label">{t('settings.testDuration')}</label>
-          <div className="test-duration-control">
-            <input
-              type="range"
-              className="duration-slider"
-              min="1"
-              max="30"
-              value={testDuration}
-              onChange={(e) => setTestDuration(parseInt(e.target.value))}
-            />
-            <span className="test-duration-value">{testDuration}s</span>
-          </div>
-        </div>
-
-        <button
-          className="save-button test-bell-btn"
-          onClick={handleTestBell}
-          disabled={testingBell || rebooting}
-        >
-          {testingBell ? t('settings.testRinging') : t('settings.testBell')}
         </button>
       </div>
 
@@ -261,15 +226,7 @@ export default function SettingsPage() {
           <div className="settings-row">
             <label className="form-label">{t('settings.pinCurrent')}</label>
             <span className="info-value">
-              {pinLoading ? '...' : (showPin ? (currentPin || '—') : '••••')}
-              <button
-                type="button"
-                className="password-toggle"
-                onClick={() => setShowPin(!showPin)}
-                style={{ marginLeft: 8 }}
-              >
-                {showPin ? '👁️' : '👁️‍🗨️'}
-              </button>
+              {pinLoading ? '...' : (currentPin || '—')}
             </span>
           </div>
         </div>
@@ -283,10 +240,10 @@ export default function SettingsPage() {
               type="text"
               className="form-input"
               inputMode="numeric"
-              pattern="\d{4}"
-              maxLength={4}
+              pattern="\d{4,6}"
+              maxLength={6}
               value={newPin}
-              onChange={(e) => { setNewPin(e.target.value.replace(/\D/g, '').slice(0, 4)); setPinError(''); }}
+              onChange={(e) => { setNewPin(e.target.value.replace(/\D/g, '').slice(0, 6)); setPinError(''); }}
               placeholder={t('settings.pinPlaceholder')}
               disabled={pinSaving}
             />
@@ -297,19 +254,19 @@ export default function SettingsPage() {
               type="text"
               className="form-input"
               inputMode="numeric"
-              pattern="\d{4}"
-              maxLength={4}
+              pattern="\d{4,6}"
+              maxLength={6}
               value={confirmPin}
-              onChange={(e) => { setConfirmPin(e.target.value.replace(/\D/g, '').slice(0, 4)); setPinError(''); }}
+              onChange={(e) => { setConfirmPin(e.target.value.replace(/\D/g, '').slice(0, 6)); setPinError(''); }}
               placeholder={t('settings.pinPlaceholder')}
               disabled={pinSaving}
               onKeyDown={(e) => { if (e.key === 'Enter') handleSavePin(); }}
             />
           </div>
           <button
-            className="save-button"
+            className={`save-button${pinSaving ? ' loading' : ''}`}
             onClick={handleSavePin}
-            disabled={pinSaving || newPin.length !== 4 || confirmPin.length !== 4}
+            disabled={pinSaving || newPin.length < 4 || confirmPin.length < 4}
           >
             {pinSaving ? t('settings.saving') : t('settings.pinSave')}
           </button>
@@ -323,7 +280,7 @@ export default function SettingsPage() {
 
         <div className="settings-section">
           <button
-            className="save-button"
+            className={`save-button${wifiScanning ? ' loading' : ''}`}
             onClick={handleScanWifi}
             disabled={wifiScanning}
             style={{ marginBottom: 12 }}
@@ -375,7 +332,7 @@ export default function SettingsPage() {
                           </div>
                         )}
                         <button
-                          className="save-button"
+                          className={`save-button${wifiSaving ? ' loading' : ''}`}
                           onClick={handleSaveWifi}
                           disabled={wifiSaving || (network.secured && !wifiPassword)}
                         >
@@ -426,12 +383,83 @@ export default function SettingsPage() {
             </div>
           </div>
           <button
-            className="save-button"
+            className={`save-button${wifiSaving ? ' loading' : ''}`}
             onClick={handleSaveWifi}
             disabled={wifiSaving || !wifiSsid.trim()}
           >
             {wifiSaving ? t('settings.wifiSaving') : t('settings.wifiSave')}
           </button>
+        </div>
+      </div>
+
+      {/* Time Synchronization */}
+      <div className="sched-card">
+        <h3>{t('settings.timeSection')}</h3>
+        <p className="card-desc">{t('settings.timeSectionDesc')}</p>
+
+        <div className="info-grid">
+          <div className="info-item">
+            <span className="info-label">{t('settings.sntpStatus')}</span>
+            <span className={`info-value ${systemInfo && !systemInfo.timeSynced ? 'text-warn' : ''}`}>
+              {systemInfo ? (systemInfo.timeSynced ? t('settings.synchronized') : t('settings.notSynchronized')) : '—'}
+              {systemInfo?.lastSyncAgeSec != null && systemInfo.lastSyncAgeSec < 4294967295
+                ? ` (${Math.floor(systemInfo.lastSyncAgeSec / 60)}m ago)`
+                : ''}
+            </span>
+          </div>
+          <div className="info-item">
+            <span className="info-label">{t('settings.deviceTime')}</span>
+            <span className="info-value">{systemInfo?.time || '—'}</span>
+          </div>
+          <div className="info-item">
+            <span className="info-label">{t('settings.date')}</span>
+            <span className="info-value">{systemInfo?.date || '—'}</span>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
+          <button
+            className={`save-button${syncing ? ' loading' : ''}`}
+            onClick={() => { dispatch(syncTime()).then(() => dispatch(fetchSystemInfo())); }}
+            disabled={syncing}
+          >
+            {syncing ? t('settings.syncing') : t('settings.syncNow')}
+          </button>
+        </div>
+      </div>
+
+      {/* System Actions */}
+      <div className="sched-card">
+        <h3>{t('settings.systemActions')}</h3>
+
+        <div className="system-actions">
+          <div className="system-action-item">
+            <div className="action-info">
+              <strong>{t('settings.reboot')}</strong>
+              <p className="card-desc">{t('settings.rebootDesc')}</p>
+            </div>
+            <button
+              className={`save-button action-btn${rebooting ? ' loading' : ''}`}
+              onClick={handleReboot}
+              disabled={rebooting || resetting}
+            >
+              {rebooting ? t('settings.rebooting') : t('settings.rebootBtn')}
+            </button>
+          </div>
+
+          <div className="system-action-item system-action-danger">
+            <div className="action-info">
+              <strong>{t('settings.factoryReset')}</strong>
+              <p className="card-desc">{t('settings.factoryResetDesc')}</p>
+            </div>
+            <button
+              className={`save-button action-btn danger-btn${resetting ? ' loading' : ''}`}
+              onClick={handleFactoryReset}
+              disabled={rebooting || resetting}
+            >
+              {resetting ? t('settings.resetting') : t('settings.factoryResetBtn')}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -490,48 +518,6 @@ export default function SettingsPage() {
           >
             {t('settings.refresh')}
           </button>
-          <button
-            className="refresh-btn"
-            onClick={() => { dispatch(syncTime()).then(() => dispatch(fetchSystemInfo())); }}
-            disabled={syncing}
-          >
-            {syncing ? t('settings.syncing') : t('settings.syncNow')}
-          </button>
-        </div>
-      </div>
-
-      {/* System Actions */}
-      <div className="sched-card">
-        <h3>{t('settings.systemActions')}</h3>
-
-        <div className="system-actions">
-          <div className="system-action-item">
-            <div className="action-info">
-              <strong>{t('settings.reboot')}</strong>
-              <p className="card-desc">{t('settings.rebootDesc')}</p>
-            </div>
-            <button
-              className="save-button action-btn"
-              onClick={handleReboot}
-              disabled={rebooting || resetting}
-            >
-              {rebooting ? t('settings.rebooting') : t('settings.rebootBtn')}
-            </button>
-          </div>
-
-          <div className="system-action-item system-action-danger">
-            <div className="action-info">
-              <strong>{t('settings.factoryReset')}</strong>
-              <p className="card-desc">{t('settings.factoryResetDesc')}</p>
-            </div>
-            <button
-              className="save-button action-btn danger-btn"
-              onClick={handleFactoryReset}
-              disabled={rebooting || resetting}
-            >
-              {resetting ? t('settings.resetting') : t('settings.factoryResetBtn')}
-            </button>
-          </div>
         </div>
       </div>
     </div>

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { fetchBellStatus, togglePanic, clearError } from './DashboardSlice.js';
+import { testBell } from '../Settings/SettingsSlice.js';
 import DeviceClock from './DeviceClock.jsx';
 import useLocale from '../../hooks/useLocale.jsx';
 
@@ -16,6 +17,9 @@ export default function DashboardPage() {
     useSelector((s) => s.dashboard);
   const { t } = useLocale();
   const [confirmPanic, setConfirmPanic] = useState(false);
+  const [testDuration, setTestDuration] = useState(3);
+  const [bellFeedback, setBellFeedback] = useState(null);
+  const { testingBell } = useSelector((s) => s.settings);
   const intervalRef = useRef(null);
 
   const refresh = useCallback(() => {
@@ -93,6 +97,42 @@ export default function DashboardPage() {
             <div className="next-bell-none">{t('dashboard.noUpcoming')}</div>
           )}
         </div>
+      </div>
+
+      {/* Activate Bell */}
+      <div className="dash-card activate-bell-card">
+        <h3>{t('dashboard.activateBell')}</h3>
+        <p className="panic-desc">{t('dashboard.activateBellDesc')}</p>
+        <div className="test-duration-control" style={{ marginBottom: 12 }}>
+          <label className="form-label" style={{ margin: 0, fontSize: 13 }}>{t('dashboard.testDuration')}</label>
+          <input
+            type="range"
+            className="duration-slider"
+            min="1"
+            max="30"
+            value={testDuration}
+            onChange={(e) => setTestDuration(parseInt(e.target.value))}
+          />
+          <span className="test-duration-value">{testDuration}s</span>
+        </div>
+        <button
+          className={`save-button test-bell-btn${testingBell ? ' loading' : ''}`}
+          onClick={() => {
+            setBellFeedback(null);
+            dispatch(testBell(testDuration)).then((result) => {
+              if (result.meta.requestStatus === 'fulfilled') {
+                setTimeout(() => dispatch(fetchBellStatus()), (testDuration * 1000) + 500);
+              } else {
+                setBellFeedback('error');
+                setTimeout(() => setBellFeedback(null), 4000);
+              }
+            });
+          }}
+          disabled={testingBell}
+        >
+          {testingBell ? t('dashboard.bellRinging') : `🔔 ${t('dashboard.activateBell')}`}
+        </button>
+        {bellFeedback === 'error' && <div className="error-message" style={{ marginTop: 10 }}>{t('dashboard.bellError')}</div>}
       </div>
 
       {/* Panic Control */}

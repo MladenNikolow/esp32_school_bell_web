@@ -2,18 +2,11 @@
 import React from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { setPanic } from '../ScheduleSlice.js';
-
-const STATE_LABELS = { idle: 'Idle', ringing: 'Ringing', panic: 'PANIC' };
-const DAY_LABELS = {
-  off: 'Day Off',
-  working: 'Working Day',
-  holiday: 'Holiday',
-  exceptionWorking: 'Exception Working',
-  exceptionHoliday: 'Exception Holiday',
-};
+import useLocale from '../../../hooks/useLocale.jsx';
 
 export default function BellStatusPanel() {
   const dispatch = useDispatch();
+  const { t } = useLocale();
   const { bellStatus, systemTime } = useSelector((state) => state.schedule);
 
   const stateClass =
@@ -31,20 +24,20 @@ export default function BellStatusPanel() {
     <div className={`bell-status-panel ${stateClass}`}>
       <div className="status-row">
         <div className="status-item">
-          <span className="status-label">Bell State</span>
-          <span className="status-value">{STATE_LABELS[bellStatus.bellState] || bellStatus.bellState}</span>
+          <span className="status-label">{t('statusPanel.bellState')}</span>
+          <span className="status-value">{t(`bellState.${bellStatus.bellState}`) || bellStatus.bellState}</span>
         </div>
         <div className="status-item">
-          <span className="status-label">Day Type</span>
-          <span className="status-value">{DAY_LABELS[bellStatus.dayType] || bellStatus.dayType}</span>
+          <span className="status-label">{t('statusPanel.dayType')}</span>
+          <span className="status-value">{t(`dayType.${bellStatus.dayType}`) || bellStatus.dayType}</span>
         </div>
         <div className="status-item">
-          <span className="status-label">Device Time</span>
+          <span className="status-label">{t('statusPanel.deviceTime')}</span>
           <span className="status-value">{systemTime?.time || '--:--:--'}</span>
         </div>
         {bellStatus.nextBell && (
           <div className="status-item">
-            <span className="status-label">Next Bell</span>
+            <span className="status-label">{t('statusPanel.nextBell')}</span>
             <span className="status-value">
               {bellStatus.nextBell.time}
               {bellStatus.nextBell.label ? ` (${bellStatus.nextBell.label})` : ''}
@@ -57,7 +50,7 @@ export default function BellStatusPanel() {
           className={`panic-button ${bellStatus.panicMode ? 'panic-active' : ''}`}
           onClick={handlePanicToggle}
         >
-          {bellStatus.panicMode ? 'STOP PANIC' : 'PANIC'}
+          {bellStatus.panicMode ? t('statusPanel.stopPanic') : t('statusPanel.panic')}
         </button>
       </div>
     </div>

@@ -94,7 +94,7 @@ export default function LoginPage() {
       </div>
       
       <div className="login-content">
-        <form onSubmit={handleSubmit} className="login-form">
+        <form onSubmit={handleSubmit} className="login-form" autoComplete="off">
           {error && (
             <div className="error-message">
               {error}
@@ -114,7 +114,7 @@ export default function LoginPage() {
               onBlur={() => handleInputBlur('username')}
               placeholder={t('auth.enterUsername')}
               disabled={isLoading}
-              autoComplete="username"
+              autoComplete="off"
               autoCapitalize="none"
               autoCorrect="off"
             />
@@ -137,7 +137,7 @@ export default function LoginPage() {
                 onBlur={() => handleInputBlur('password')}
                 placeholder={t('auth.enterPassword')}
                 disabled={isLoading}
-                autoComplete="current-password"
+                autoComplete="off"
               />
               <button
                 type="button"
@@ -157,7 +157,7 @@ export default function LoginPage() {
           <div className="form-actions">
             <button
               type="submit"
-              className="login-button"
+              className={`login-button${isLoading ? ' loading' : ''}`}
               disabled={!isFormValid || isLoading}
             >
               {isLoading ? t('auth.connecting') : t('auth.connect')}

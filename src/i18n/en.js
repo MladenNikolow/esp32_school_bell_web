@@ -40,6 +40,12 @@ const en = {
   'dashboard.confirmPanicMsg': 'This will ring the bell continuously until manually stopped. Continue?',
   'dashboard.cancel': 'Cancel',
   'dashboard.activate': 'Activate',
+  'dashboard.activateBell': 'Activate Bell',
+  'dashboard.activateBellDesc': 'Ring the bell manually to verify the connection works.',
+  'dashboard.bellRinging': 'Ringing...',
+  'dashboard.bellActivated': 'Bell activated successfully!',
+  'dashboard.bellError': 'Failed to activate bell. Please try again.',
+  'dashboard.testDuration': 'Duration',
 
   // Day types
   'dayType.off': 'Weekend',
@@ -52,6 +58,14 @@ const en = {
   'bellState.idle': 'Idle',
   'bellState.ringing': 'Ringing',
   'bellState.panic': 'PANIC',
+
+  // Status panel
+  'statusPanel.bellState': 'Bell State',
+  'statusPanel.dayType': 'Day Type',
+  'statusPanel.deviceTime': 'Device Time',
+  'statusPanel.nextBell': 'Next Bell',
+  'statusPanel.panic': 'PANIC',
+  'statusPanel.stopPanic': 'STOP PANIC',
 
   // Clock
   'clock.synced': 'Synced',
@@ -115,15 +129,18 @@ const en = {
   'auto.numClasses': 'Number of Classes',
   'auto.preview': 'Preview:',
   'auto.classes': 'classes',
-  'auto.sharedSettings': 'Shared Settings',
-  'auto.classDuration': 'Class Duration (min)',
-  'auto.breakDuration': 'Break Duration (min)',
-  'auto.bigBreakDuration': 'Big Break Duration (min)',
-  'auto.bigBreakAfterClass': 'Big Break After Class',
-  'auto.bellRingDuration': 'Bell Ring Duration (sec)',
+  'auto.sharedSettings': 'Timing',
+  'auto.classDuration': 'Class Duration',
+  'auto.breakDuration': 'Break',
+  'auto.bigBreakDuration': 'Big Break',
+  'auto.bigBreakAfterClass': 'Big Break After',
+  'auto.bellRingDuration': 'Bell Ring',
+  'auto.shifts': 'Shifts',
   'auto.generateApply': 'Generate & Apply',
   'auto.replaceWarning': 'This will replace all current bells in both shifts.',
   'auto.period': 'Period {n}',
+  'schedule.classStart': 'Class {n} start',
+  'schedule.classEnd': 'Class {n} end',
 
   // Settings
   'settings.generalSettings': 'General Settings',
@@ -154,6 +171,8 @@ const en = {
   'settings.refresh': '↻ Refresh',
   'settings.syncNow': '⟳ Sync Time',
   'settings.syncing': 'Syncing...',
+  'settings.timeSection': 'Time Synchronization',
+  'settings.timeSectionDesc': 'Trigger a manual SNTP time synchronization with the configured server.',
   'settings.systemActions': 'System Actions',
   'settings.reboot': 'Reboot Device',
   'settings.rebootDesc': 'Restart the ESP32. The connection will be lost briefly.',
@@ -190,14 +209,14 @@ const en = {
 
   // Touchscreen PIN
   'settings.pinTitle': 'Touchscreen PIN',
-  'settings.pinDesc': 'The 4-digit PIN protects dangerous actions (test bell, panic mode) on the touchscreen.',
+  'settings.pinDesc': 'The PIN (4–6 digits) protects dangerous actions (test bell, panic mode) on the touchscreen.',
   'settings.pinCurrent': 'Current PIN',
   'settings.pinChange': 'Change PIN',
   'settings.pinNew': 'New PIN',
   'settings.pinConfirm': 'Confirm PIN',
-  'settings.pinPlaceholder': '4 digits',
+  'settings.pinPlaceholder': '4–6 digits',
   'settings.pinSave': 'Update PIN',
-  'settings.pinInvalidFormat': 'PIN must be exactly 4 digits.',
+  'settings.pinInvalidFormat': 'PIN must be 4 to 6 digits.',
   'settings.pinMismatch': 'PINs do not match.',
 
   // Calendar
