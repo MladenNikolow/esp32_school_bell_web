@@ -33,6 +33,8 @@ export const API_CONFIG = {
     BELL_STATUS: '/api/bell/status',
     BELL_PANIC: '/api/bell/panic',
     BELL_TEST: '/api/bell/test',
+
+    // System endpoints
     SYSTEM_TIME: '/api/system/time',
     SYSTEM_INFO: '/api/system/info',
     SYSTEM_REBOOT: '/api/system/reboot',
