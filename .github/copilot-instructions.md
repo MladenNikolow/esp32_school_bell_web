@@ -37,22 +37,26 @@ Shared layers:
 
 ## Authentication System
 
-The auth system is documented in detail in `docs/AUTHENTICATION.md`. Key points:
+The auth system uses **HttpOnly session cookies** — documented in detail in `docs/AUTHENTICATION.md`. Key points:
 
-- Token stored in `localStorage` as `{ token, timestamp }` under key `esp32_auth_token`
-- `HttpClient` auto-injects `Authorization: Bearer <token>` on protected endpoints
-- 401/403 responses trigger automatic token cleanup and redirect to login
-- `TokenManager` handles all `localStorage` operations with JSON validation and error resilience
-- `AuthGuard` wraps the app — validates stored token with server on startup
-- Two Redux middlewares: `authMiddleware` (auth-error events) and `tokenValidationMiddleware` (24h expiration)
+- Server sets `Set-Cookie: session=<token>; HttpOnly; SameSite=Strict; Path=/` on login (no Expires = session cookie, cleared on browser close)
+- Browser sends the cookie automatically via `credentials: 'same-origin'` — JavaScript never reads the credential
+- `TokenManager` stores auth *metadata* in `sessionStorage` under key `esp32_auth_meta` (`{ authenticated, timestamp }`) — UI hint only
+- `HttpClient` adds `X-Requested-With: XMLHttpRequest` on POST/PUT/DELETE for CSRF defense
+- Firmware enforces `Content-Type: application/json` + `X-Requested-With: XMLHttpRequest` on all state-changing endpoints
+- 401/403 responses trigger automatic session metadata cleanup and redirect to login
+- `AuthGuard` wraps the app — validates session cookie with server on startup
+- Two Redux middlewares: `authMiddleware` (auth-error events) and `tokenValidationMiddleware` (24h session age check)
 
 ## API Communication
 
 - All endpoints defined in `src/config/apiConfig.js`
-- `HttpClient` (singleton) handles raw fetch with auth injection
+- `HttpClient` (singleton) handles raw fetch with cookie-based auth (`credentials: 'same-origin'`)
 - `HttpRequestAgent` (singleton) provides higher-level methods (get, post, login, logout, validateToken)
 - Public endpoints (no auth): `/api/login`, `/api/health`, `/api/status`, `/api/wifi/*`
-- Protected endpoints require Bearer token
+- Protected endpoints require a valid session cookie (sent automatically by browser)
+- CSRF defense: POST/PUT/DELETE require `Content-Type: application/json` + `X-Requested-With: XMLHttpRequest`
+- API specification: `ESP32_API_Specification.md` (cookie auth, CSRF, security headers)
 
 ## Conventions
 
@@ -66,8 +70,8 @@ The auth system is documented in detail in `docs/AUTHENTICATION.md`. Key points:
 ## Documentation
 
 - `docs/AUTHENTICATION.md` — Full authentication system documentation
-- `PROJECT_STRUCTURE.md` — File organization and data flow
-- `ESP32_API_Specification.md` — Complete API endpoint reference
+- `docs/PROJECT_STRUCTURE.md` — File organization and data flow
+- `docs/ESP32_API_Specification.md` — Complete API endpoint reference
 - `REFACTORING_SUMMARY.md` — Refactoring history
 
 ## Post-Task Rule
@@ -77,5 +81,5 @@ After completing any task, **always ask the user** whether the project documenta
 - `docs/AUTHENTICATION.md` — if auth, token, HTTP, or middleware logic changed
 - `docs/.instructions.md` — if key files, patterns, or conventions changed
 - `.github/copilot-instructions.md` — if project structure, tech stack, or conventions changed
-- `PROJECT_STRUCTURE.md` — if files were added, moved, or removed
-- `ESP32_API_Specification.md` — if API endpoints or request/response formats changed
+- `docs/PROJECT_STRUCTURE.md` — if files were added, moved, or removed
+- `docs/ESP32_API_Specification.md` — if API endpoints or request/response formats changed

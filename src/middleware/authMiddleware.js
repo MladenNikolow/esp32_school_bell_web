@@ -29,23 +29,25 @@ export const authMiddleware = (store) => (next) => (action) => {
 };
 
 /**
- * Token validation middleware - checks token expiration
+ * Session validation middleware - checks client-side session age.
+ * The actual token lifetime is managed by the server via the HttpOnly cookie,
+ * but this provides an additional client-side safety net.
  */
 export const tokenValidationMiddleware = (store) => (next) => (action) => {
   const result = next(action);
   
-  // Check token age on certain actions
+  // Check session age on certain actions
   const actionsToCheck = [
     'auth/loginUser/fulfilled',
     'auth/initializeAuth/fulfilled'
   ];
   
   if (actionsToCheck.includes(action.type)) {
-    // Check if token is too old (24 hours)
-    const maxAge = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+    // Check if client-side session metadata is too old (1 hour)
+    const maxAge = 1 * 60 * 60 * 1000; // 1 hour in milliseconds
     
-    if (TokenManager.isTokenExpired(maxAge)) {
-      console.warn('Token is expired, clearing auth state');
+    if (TokenManager.isSessionExpired(maxAge)) {
+      console.warn('Session metadata is expired, clearing auth state');
       store.dispatch(clearAuthToken());
     }
   }

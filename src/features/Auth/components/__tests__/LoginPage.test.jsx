@@ -16,7 +16,6 @@ const createMockStore = (initialState = {}) => {
     },
     preloadedState: {
       auth: {
-        token: null,
         isAuthenticated: false,
         isLoading: false,
         isInitializing: false,
@@ -39,8 +38,8 @@ const renderWithStore = (component, store) => {
 
 describe('LoginPage Component', () => {
   beforeEach(() => {
-    // Clear localStorage before each test
-    localStorage.clear();
+    // Clear sessionStorage before each test
+    sessionStorage.clear();
   });
 
   test('renders login form with all required elements', () => {

@@ -5,12 +5,16 @@ import { isPublicEndpoint, API_CONFIG } from '../config/apiConfig.js';
 /**
  * @typedef {Object} RequestOptions
  * @property {Record<string, string>} [headers] - Additional headers
- * @property {boolean} [skipAuth] - Skip automatic token injection
+ * @property {boolean} [skipAuth] - Skip authentication check
  * @property {AbortSignal} [signal] - Abort signal for request cancellation
  */
 
 /**
- * Enhanced HTTP client with automatic authentication token injection
+ * Enhanced HTTP client with HttpOnly cookie-based authentication.
+ * 
+ * The server sets an HttpOnly session cookie on login. The browser
+ * automatically attaches it to every same-origin request via
+ * `credentials: 'same-origin'`. No Authorization header is needed.
  */
 class HttpClient {
   /**
@@ -73,12 +77,16 @@ class HttpClient {
   async delete(url, options = {}) {
     return this.request(url, {
       method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers,
+      },
       ...options,
     });
   }
 
   /**
-   * Make a generic HTTP request with automatic token injection
+   * Make a generic HTTP request with cookie-based authentication
    * @param {string} url - Request URL
    * @param {RequestInit & RequestOptions} options - Request options
    * @returns {Promise<Response>} Fetch response
@@ -91,28 +99,32 @@ class HttpClient {
       ...fetchOptions.headers,
     };
 
-    // Add authentication token if not skipped and not a login request
+    // CSRF defense: add X-Requested-With on all state-changing requests.
+    // The server must reject POST/PUT/DELETE without this header.
+    // Cross-origin forms and simple requests cannot set custom headers.
+    const method = (fetchOptions.method || 'GET').toUpperCase();
+    if (method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS') {
+      headers['X-Requested-With'] = 'XMLHttpRequest';
+    }
+
+    // Check that protected endpoints have an active session
     if (!skipAuth && !this.isLoginRequest(url)) {
-      const token = TokenManager.getStoredToken();
-      
-      if (token) {
-        headers.Authorization = `Bearer ${token}`;
-      } else if (this.requiresAuth(url)) {
-        // Block requests that require auth when no token is available
-        throw new Error('Authentication required but no token available');
+      if (this.requiresAuth(url) && !TokenManager.hasAuthSession()) {
+        throw new Error('Authentication required but no active session');
       }
     }
 
-    // Make the request
+    // Make the request — browser sends HttpOnly cookie automatically
     const response = await fetch(url, {
       ...fetchOptions,
       headers,
+      credentials: 'same-origin',
     });
 
     // Handle authentication errors
     if (!skipAuthErrorHandling && (response.status === 401 || response.status === 403)) {
-      // Clear stored token on authentication failure
-      TokenManager.clearStoredToken();
+      // Clear client-side auth metadata on authentication failure
+      TokenManager.clearAuthSession();
       
       // Dispatch custom event for auth error handling
       window.dispatchEvent(new CustomEvent('auth-error', {

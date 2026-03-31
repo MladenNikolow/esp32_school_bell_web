@@ -47,6 +47,7 @@ export const API_CONFIG = {
   // Public endpoints that don't require authentication
   PUBLIC_ENDPOINTS: [
     '/api/login',
+    '/api/validate-token',
     '/api/health',
     '/api/status',
     '/api/wifi/status',
@@ -79,9 +80,8 @@ export const API_CONFIG = {
     MAX_RETRIES: 2,
     RETRY_DELAY: 1000, // 1 second
     
-    // Authentication configuration
-    TOKEN_HEADER: 'Authorization',
-    TOKEN_PREFIX: 'Bearer ',
+    // Authentication is handled via HttpOnly session cookies.
+    // The browser sends the cookie automatically with credentials: 'same-origin'.
     
     // ESP32 specific optimizations
     KEEP_ALIVE: false, // ESP32 may not support keep-alive well
@@ -176,8 +176,9 @@ export function validateApiResponse(response, data) {
   }
   
   // Check for required fields in auth responses
+  // Token is now set via HttpOnly cookie; JSON body only needs user info
   if (response.url.includes(API_CONFIG.ENDPOINTS.LOGIN)) {
-    return !!(data && data.token);
+    return !!(data && data.user);
   }
   
   // Check for required fields in validation responses

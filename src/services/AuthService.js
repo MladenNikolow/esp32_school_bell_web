@@ -33,9 +33,10 @@ class AuthService {
   }
 
   /**
-   * Authenticate user with credentials
+   * Authenticate user with credentials.
+   * The server responds with a Set-Cookie header containing the HttpOnly session cookie.
    * @param {LoginCredentials} credentials - User credentials
-   * @returns {Promise<AuthResponse>} Authentication response
+   * @returns {Promise<AuthResponse>} Authentication response (user info, message)
    */
   async login(credentials) {
     // Validate credentials before sending
@@ -43,7 +44,7 @@ class AuthService {
 
     try {
       const response = await this.httpClient.post(API_CONFIG.ENDPOINTS.LOGIN, credentials, {
-        skipAuth: true // Login requests don't need auth token
+        skipAuth: true // Login requests don't need auth
       });
 
       if (!response.ok) {
@@ -54,26 +55,17 @@ class AuthService {
       }
 
       const data = await response.json();
-      
-      // Validate response structure
-      if (!data.token) {
-        throw new Error('Invalid server response: missing authentication token');
-      }
 
-      // Store token using TokenManager
-      const stored = this.tokenManager.storeToken(data.token);
-      if (!stored) {
-        throw new Error('Failed to store authentication token');
-      }
+      // Mark client-side auth metadata (actual token is in HttpOnly cookie)
+      this.tokenManager.markAuthenticated();
 
       return {
-        token: data.token,
         user: data.user || { username: credentials.username },
         message: data.message || 'Login successful'
       };
     } catch (error) {
       // Ensure no partial auth state on login failure
-      this.tokenManager.clearStoredToken();
+      this.tokenManager.clearAuthSession();
       
       // Use error handler for consistent error processing
       const errorInfo = this.errorHandler.handleAuthError(error, { action: 'login' });
@@ -82,86 +74,80 @@ class AuthService {
   }
 
   /**
-   * Log out current user
+   * Log out current user.
+   * The server responds with an expired Set-Cookie to clear the HttpOnly cookie.
    * @returns {Promise<void>}
    */
   async logout() {
-    const token = this.tokenManager.getStoredToken();
-    
     try {
-      // Notify server of logout (best effort)
-      if (token) {
+      // Notify server of logout (best effort) — server clears the HttpOnly cookie
+      if (this.tokenManager.hasAuthSession()) {
         await this.httpClient.post(API_CONFIG.ENDPOINTS.LOGOUT, {}, {
-          timeout: 5000 // Short timeout for logout
+          timeout: 5000,
+          skipAuthErrorHandling: true
         }).catch(error => {
-          this.errorHandler.logError(error, 'logout', { token: !!token });
+          this.errorHandler.logError(error, 'logout', { hasSession: true });
         });
       }
     } finally {
-      // Always clear local storage regardless of server response
-      this.tokenManager.clearStoredToken();
+      // Always clear client-side auth metadata
+      this.tokenManager.clearAuthSession();
     }
   }
 
   /**
-   * Validate stored token with server
+   * Validate current session with server
    * @returns {Promise<{valid: boolean, user?: UserInfo}>}
    */
   async validateStoredToken() {
-    const token = this.tokenManager.getStoredToken();
-    if (!token) {
-      return { valid: false };
-    }
-
     try {
-      const response = await this.httpClient.get(API_CONFIG.ENDPOINTS.VALIDATE_TOKEN);
+      // Always ask the server — the HttpOnly session cookie is the source of truth
+      // and is shared across tabs (unlike sessionStorage).
+      const response = await this.httpClient.get(API_CONFIG.ENDPOINTS.VALIDATE_TOKEN, {
+        skipAuth: true,
+        skipAuthErrorHandling: true
+      });
       
       if (!response.ok) {
-        this.tokenManager.clearStoredToken();
+        this.tokenManager.clearAuthSession();
         return { valid: false };
       }
       
       const data = await response.json();
+      // Sync client-side metadata so other code paths see us as authenticated
+      this.tokenManager.markAuthenticated();
       return { 
         valid: true, 
         user: data.user || null 
       };
     } catch (error) {
-      this.errorHandler.logError(error, 'token-validation', { hasToken: !!token });
-      this.tokenManager.clearStoredToken();
+      this.errorHandler.logError(error, 'session-validation', { hasSession: false });
+      this.tokenManager.clearAuthSession();
       return { valid: false };
     }
   }
 
   /**
-   * Get stored authentication token
-   * @returns {string|null} Stored token or null if not found
+   * Check if there is an active auth session (client-side hint)
+   * @returns {boolean}
    */
-  getStoredToken() {
-    return this.tokenManager.getStoredToken();
+  hasAuthSession() {
+    return this.tokenManager.hasAuthSession();
   }
 
   /**
-   * Store authentication token
-   * @param {string} token - Token to store
+   * Clear client-side auth metadata
    */
-  storeToken(token) {
-    return this.tokenManager.storeToken(token);
+  clearAuthSession() {
+    this.tokenManager.clearAuthSession();
   }
 
   /**
-   * Clear stored authentication token
-   */
-  clearStoredToken() {
-    this.tokenManager.clearStoredToken();
-  }
-
-  /**
-   * Check if user is currently authenticated
+   * Check if user is currently authenticated (client-side hint)
    * @returns {boolean} True if authenticated
    */
   isAuthenticated() {
-    return this.tokenManager.hasStoredToken();
+    return this.tokenManager.hasAuthSession();
   }
 
   /**
@@ -228,29 +214,12 @@ class AuthService {
   }
 
   /**
-   * Create authentication headers for manual requests
-   * @returns {Object} Headers object with Authorization header
-   */
-  getAuthHeaders() {
-    const token = this.getStoredToken();
-    return token ? { Authorization: `Bearer ${token}` } : {};
-  }
-
-  /**
-   * Check if token is expired based on age
+   * Check if session is expired based on age
    * @param {number} maxAge - Maximum age in milliseconds
-   * @returns {boolean} True if token is expired
+   * @returns {boolean} True if session is expired
    */
-  isTokenExpired(maxAge = 24 * 60 * 60 * 1000) { // Default 24 hours
-    return this.tokenManager.isTokenExpired(maxAge);
-  }
-
-  /**
-   * Get token metadata
-   * @returns {Object|null} Token data with timestamp
-   */
-  getTokenData() {
-    return this.tokenManager.getTokenData();
+  isSessionExpired(maxAge = 24 * 60 * 60 * 1000) { // Default 24 hours
+    return this.tokenManager.isSessionExpired(maxAge);
   }
 }
 

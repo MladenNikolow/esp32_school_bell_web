@@ -1,153 +1,142 @@
 // src/utils/TokenManager.js
 
 /**
- * @typedef {import('../types/auth.js').TokenData} TokenData
- */
-
-/**
- * Token management utility for localStorage operations
+ * Token management utility for HttpOnly cookie-based authentication.
+ * 
+ * The actual auth token is stored as an HttpOnly session cookie by the server
+ * (Set-Cookie header with no Expires/Max-Age). JavaScript cannot read or write
+ * the cookie directly — the browser handles it automatically.
+ * 
+ * This class only tracks lightweight client-side auth metadata (login timestamp)
+ * in sessionStorage so the UI can determine authenticated state and session age.
+ * The sessionStorage data is automatically cleared when the browser is closed.
  */
 class TokenManager {
   constructor() {
-    this.storageKey = 'esp32_auth_token';
+    this.storageKey = 'esp32_auth_meta';
   }
 
   /**
-   * Store authentication token in localStorage
-   * @param {string} token - Token to store
-   * @returns {boolean} True if stored successfully
+   * Record that a successful login occurred.
+   * Called after the server sets the HttpOnly session cookie.
+   * @returns {boolean} True if recorded successfully
    */
-  storeToken(token) {
+  markAuthenticated() {
     try {
-      if (!token || typeof token !== 'string') {
-        throw new Error('Invalid token provided');
-      }
-
-      const tokenData = {
-        token,
+      const meta = {
+        authenticated: true,
         timestamp: Date.now(),
       };
-
-      localStorage.setItem(this.storageKey, JSON.stringify(tokenData));
+      sessionStorage.setItem(this.storageKey, JSON.stringify(meta));
       return true;
     } catch (error) {
-      console.error('Failed to store token:', error);
+      console.error('Failed to store auth metadata:', error);
       return false;
     }
   }
 
   /**
-   * Retrieve stored token from localStorage
-   * @returns {string|null} Stored token or null if not found
+   * Check if the client believes it is authenticated.
+   * This is a client-side hint only — the server is the source of truth
+   * via the HttpOnly cookie.
+   * @returns {boolean} True if auth metadata exists
    */
-  getStoredToken() {
+  hasAuthSession() {
     try {
-      const storedData = localStorage.getItem(this.storageKey);
-      if (!storedData) {
-        return null;
-      }
+      const stored = sessionStorage.getItem(this.storageKey);
+      if (!stored) return false;
 
-      const parsed = JSON.parse(storedData);
-      
-      // Validate token data structure
-      if (!parsed || typeof parsed !== 'object' || !parsed.token) {
-        this.clearStoredToken(); // Clear invalid data
-        return null;
-      }
-
-      return parsed.token;
-    } catch (error) {
-      console.warn('Failed to parse stored token:', error);
-      this.clearStoredToken(); // Clear corrupted data
-      return null;
+      const parsed = JSON.parse(stored);
+      return !!(parsed && parsed.authenticated);
+    } catch {
+      this.clearAuthSession();
+      return false;
     }
   }
 
   /**
-   * Get full token data including metadata
-   * @returns {TokenData|null} Token data or null if not found
-   */
-  getTokenData() {
-    try {
-      const storedData = localStorage.getItem(this.storageKey);
-      if (!storedData) {
-        return null;
-      }
-
-      const parsed = JSON.parse(storedData);
-      
-      // Validate token data structure
-      if (!parsed || typeof parsed !== 'object' || !parsed.token) {
-        this.clearStoredToken(); // Clear invalid data
-        return null;
-      }
-
-      return parsed;
-    } catch (error) {
-      console.warn('Failed to parse stored token data:', error);
-      this.clearStoredToken(); // Clear corrupted data
-      return null;
-    }
-  }
-
-  /**
-   * Clear stored token from localStorage
+   * Clear client-side auth metadata.
+   * Note: This does NOT clear the HttpOnly cookie — that requires
+   * a server call to /api/logout which responds with an expired Set-Cookie.
    * @returns {boolean} True if cleared successfully
    */
-  clearStoredToken() {
+  clearAuthSession() {
     try {
-      localStorage.removeItem(this.storageKey);
+      sessionStorage.removeItem(this.storageKey);
       return true;
     } catch (error) {
-      console.warn('Failed to clear stored token:', error);
+      console.warn('Failed to clear auth metadata:', error);
       return false;
     }
   }
 
   /**
-   * Check if a token is currently stored
-   * @returns {boolean} True if token exists
+   * Get session age in milliseconds
+   * @returns {number|null} Age in milliseconds or null if no session
    */
-  hasStoredToken() {
-    return !!this.getStoredToken();
-  }
-
-  /**
-   * Check if localStorage is available
-   * @returns {boolean} True if localStorage is available
-   */
-  isStorageAvailable() {
+  getSessionAge() {
     try {
-      const testKey = '__storage_test__';
-      localStorage.setItem(testKey, 'test');
-      localStorage.removeItem(testKey);
-      return true;
-    } catch {
-      return false;
-    }
-  }
+      const stored = sessionStorage.getItem(this.storageKey);
+      if (!stored) return null;
 
-  /**
-   * Get token age in milliseconds
-   * @returns {number|null} Age in milliseconds or null if no token
-   */
-  getTokenAge() {
-    const tokenData = this.getTokenData();
-    if (!tokenData || !tokenData.timestamp) {
+      const parsed = JSON.parse(stored);
+      if (!parsed || !parsed.timestamp) return null;
+
+      return Date.now() - parsed.timestamp;
+    } catch {
       return null;
     }
-
-    return Date.now() - tokenData.timestamp;
   }
 
   /**
-   * Check if token is older than specified age
+   * Check if session is older than specified age
    * @param {number} maxAge - Maximum age in milliseconds
-   * @returns {boolean} True if token is too old
+   * @returns {boolean} True if session is too old
    */
-  isTokenExpired(maxAge) {
-    const age = this.getTokenAge();
+  isSessionExpired(maxAge) {
+    const age = this.getSessionAge();
     return age !== null && age > maxAge;
+  }
+
+  // ── Legacy API shims (for backward-compatible call sites) ──
+
+  /**
+   * @deprecated Use markAuthenticated(). Kept for backward compatibility.
+   * @param {string} _token - Ignored; cookie is set by server
+   * @returns {boolean}
+   */
+  storeToken(_token) {
+    return this.markAuthenticated();
+  }
+
+  /**
+   * @deprecated Cookie is HttpOnly; JS cannot read the token value.
+   * Returns a truthy placeholder when authenticated so existing
+   * null-checks (e.g. `if (token)`) still work.
+   * @returns {string|null}
+   */
+  getStoredToken() {
+    return this.hasAuthSession() ? '__httponly__' : null;
+  }
+
+  /** @deprecated Use clearAuthSession() */
+  clearStoredToken() {
+    return this.clearAuthSession();
+  }
+
+  /** @deprecated Use hasAuthSession() */
+  hasStoredToken() {
+    return this.hasAuthSession();
+  }
+
+  /** @deprecated Use getSessionAge() */
+  getTokenAge() {
+    return this.getSessionAge();
+  }
+
+  /** @deprecated Use isSessionExpired() */
+  isTokenExpired(maxAge) {
+    return this.isSessionExpired(maxAge);
   }
 }
 

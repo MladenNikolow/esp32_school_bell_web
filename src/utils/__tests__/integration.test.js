@@ -1,83 +1,73 @@
 // src/utils/__tests__/integration.test.js
-// Basic integration test for token management and HTTP client
+// Basic integration test for session management and HTTP client
 
 import TokenManager from '../TokenManager.js';
 import HttpRequestAgent from '../HttpRequestAgent.js';
 
-describe('Token Management Integration', () => {
+describe('Session Management Integration', () => {
   beforeEach(() => {
-    // Clear localStorage before each test
-    localStorage.clear();
+    // Clear sessionStorage before each test
+    sessionStorage.clear();
   });
 
-  test('TokenManager stores and retrieves tokens correctly', () => {
-    const testToken = 'test-jwt-token-123';
+  test('TokenManager tracks auth session correctly', () => {
+    // Mark authenticated
+    const marked = TokenManager.markAuthenticated();
+    expect(marked).toBe(true);
     
-    // Store token
-    const stored = TokenManager.storeToken(testToken);
-    expect(stored).toBe(true);
+    // Check session exists
+    expect(TokenManager.hasAuthSession()).toBe(true);
     
-    // Retrieve token
-    const retrieved = TokenManager.getStoredToken();
-    expect(retrieved).toBe(testToken);
-    
-    // Check if token exists
-    expect(TokenManager.hasStoredToken()).toBe(true);
+    // Legacy shim returns a truthy placeholder
+    expect(TokenManager.getStoredToken()).toBe('__httponly__');
   });
 
   test('TokenManager handles invalid data gracefully', () => {
-    // Store invalid data directly in localStorage
-    localStorage.setItem('esp32_auth_token', 'invalid-json');
+    // Store invalid data directly in sessionStorage
+    sessionStorage.setItem('esp32_auth_meta', 'invalid-json');
     
-    // Should return null and clear corrupted data
-    const token = TokenManager.getStoredToken();
-    expect(token).toBe(null);
-    expect(localStorage.getItem('esp32_auth_token')).toBe(null);
+    // Should return false and clear corrupted data
+    expect(TokenManager.hasAuthSession()).toBe(false);
+    expect(sessionStorage.getItem('esp32_auth_meta')).toBe(null);
   });
 
-  test('TokenManager calculates token age correctly', () => {
-    const testToken = 'test-token';
-    TokenManager.storeToken(testToken);
+  test('TokenManager calculates session age correctly', () => {
+    TokenManager.markAuthenticated();
     
-    const age = TokenManager.getTokenAge();
+    const age = TokenManager.getSessionAge();
     expect(age).toBeGreaterThanOrEqual(0);
     expect(age).toBeLessThan(1000); // Should be very recent
   });
 
   test('HttpRequestAgent integrates with TokenManager', () => {
-    const testToken = 'test-integration-token';
-    TokenManager.storeToken(testToken);
+    TokenManager.markAuthenticated();
     
-    // Verify HttpRequestAgent can access the token
+    // Verify HttpRequestAgent can check auth state
     expect(HttpRequestAgent.isAuthenticated()).toBe(true);
-    expect(HttpRequestAgent.getToken()).toBe(testToken);
     
     // Clear auth
     HttpRequestAgent.clearAuth();
     expect(HttpRequestAgent.isAuthenticated()).toBe(false);
-    expect(HttpRequestAgent.getToken()).toBe(null);
   });
 
-  test('Token expiration detection works', () => {
-    const testToken = 'expired-token';
-    
-    // Manually create expired token data
-    const expiredData = {
-      token: testToken,
+  test('Session expiration detection works', () => {
+    // Manually create expired session metadata
+    const expiredMeta = {
+      authenticated: true,
       timestamp: Date.now() - (25 * 60 * 60 * 1000) // 25 hours ago
     };
     
-    localStorage.setItem('esp32_auth_token', JSON.stringify(expiredData));
+    sessionStorage.setItem('esp32_auth_meta', JSON.stringify(expiredMeta));
     
-    // Check if token is expired (24 hour limit)
+    // Check if session is expired (24 hour limit)
     const maxAge = 24 * 60 * 60 * 1000;
-    expect(TokenManager.isTokenExpired(maxAge)).toBe(true);
+    expect(TokenManager.isSessionExpired(maxAge)).toBe(true);
   });
 });
 
 describe('HTTP Client Integration', () => {
   beforeEach(() => {
-    localStorage.clear();
+    sessionStorage.clear();
   });
 
   test('HttpRequestAgent creates abort controllers', () => {
@@ -90,8 +80,8 @@ describe('HTTP Client Integration', () => {
     // Initially not authenticated
     expect(HttpRequestAgent.isAuthenticated()).toBe(false);
     
-    // Store a token
-    TokenManager.storeToken('test-token');
+    // Mark as authenticated
+    TokenManager.markAuthenticated();
     expect(HttpRequestAgent.isAuthenticated()).toBe(true);
     
     // Clear authentication

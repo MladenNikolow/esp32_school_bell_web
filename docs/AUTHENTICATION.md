@@ -2,21 +2,68 @@
 
 ## Architecture Overview
 
-The authentication system is a **5-layer architecture**:
+The authentication system uses **HttpOnly session cookies** set by the ESP32 server. The client never sees or stores the actual session token — the browser manages it automatically. A `sessionStorage` metadata record tracks the *fact* of authentication for UI purposes.
 
 | Layer | File | Responsibility |
 |-------|------|----------------|
 | **UI** | `src/features/Auth/components/LoginPage.jsx` | User input, form validation, error display |
-| **State** | `src/features/Auth/AuthSlice.js` | Redux state management (token, user, flags) |
+| **State** | `src/features/Auth/AuthSlice.js` | Redux state management (authenticated flag, user, flags) |
 | **Service** | `src/services/AuthService.js` / `src/utils/HttpRequestAgent.js` | Business logic, credential validation |
-| **HTTP** | `src/utils/HttpClient.js` | Automatic token injection, auth error detection |
-| **Storage** | `src/utils/TokenManager.js` | Persistent token storage in `localStorage` |
+| **HTTP** | `src/utils/HttpClient.js` | Cookie-based auth (`credentials: 'same-origin'`), CSRF headers, auth error detection |
+| **Metadata** | `src/utils/TokenManager.js` | Client-side session metadata in `sessionStorage` (not the actual credential) |
 
 Supporting files:
 
-- `src/types/auth.js` — JSDoc type definitions (`AuthState`, `UserInfo`, `LoginCredentials`, `TokenData`, etc.)
+- `src/types/auth.js` — JSDoc type definitions (`AuthState`, `UserInfo`, `LoginCredentials`, `SessionMeta`, etc.)
 - `src/config/apiConfig.js` — API endpoints, public endpoint list, error messages, request configuration
-- `src/middleware/authMiddleware.js` — Redux middleware for auth error events and token expiration checks
+- `src/middleware/authMiddleware.js` — Redux middleware for auth error events and session expiration checks
+
+---
+
+## Cookie-Based Auth Model
+
+The actual session credential is an **HttpOnly cookie** set by the server:
+
+```
+Set-Cookie: session=<opaque_token>; HttpOnly; SameSite=Strict; Path=/
+```
+
+| Property | Value | Purpose |
+|----------|-------|---------|
+| `HttpOnly` | *(flag)* | JavaScript cannot read the cookie — XSS cannot steal the credential |
+| `SameSite=Strict` | *(flag)* | Cookie only sent on same-site requests — primary CSRF defense |
+| `Path=/` | `/` | Cookie available to all API paths |
+| `Expires/Max-Age` | *omitted* | Session cookie — automatically cleared when the browser closes |
+
+The browser sends this cookie automatically on every same-origin `fetch()` call when `credentials: 'same-origin'` is set. The client-side code never reads, stores, or transmits the token itself.
+
+---
+
+## CSRF Protection
+
+Because the browser sends the session cookie automatically, state-changing requests need CSRF protection. The system uses two complementary defenses:
+
+### 1. Content-Type Enforcement
+
+All POST/PUT/DELETE requests to protected endpoints must include:
+
+```
+Content-Type: application/json
+```
+
+HTML forms can only submit `application/x-www-form-urlencoded`, `multipart/form-data`, or `text/plain` — they cannot send `application/json`. The firmware rejects any mutating request without this header with **415 Unsupported Media Type**.
+
+### 2. X-Requested-With Header
+
+All POST/PUT/DELETE requests must include:
+
+```
+X-Requested-With: XMLHttpRequest
+```
+
+This is a custom header that HTML forms cannot set and that triggers a CORS preflight for cross-origin requests. The firmware rejects mutating requests without this header with **403 Forbidden**.
+
+`HttpClient.request()` automatically adds `X-Requested-With: XMLHttpRequest` to all non-GET/HEAD/OPTIONS requests.
 
 ---
 
@@ -36,21 +83,23 @@ HttpRequestAgent.login()
   │  HttpClient.post('/api/login', credentials, { skipAuth: true })
   ▼
 HttpClient.request()
-  │  skipAuth=true → no Bearer token injected
+  │  skipAuth=true → no auth session check
   │  POST /api/login  { username, password }
+  │  headers: Content-Type: application/json, X-Requested-With: XMLHttpRequest
+  │  credentials: 'same-origin'
   ▼
 ESP32 Server responds
-  │  { token: "eyJhbG...", user: { username, role }, message: "Login successful" }
+  │  Set-Cookie: session=<opaque_token>; HttpOnly; SameSite=Strict; Path=/
+  │  Body: { user: { username, role }, message: "Login successful" }
   ▼
 HttpRequestAgent.login()
-  │  Validates response (token must exist)
-  │  TokenManager.storeToken(token)
+  │  Validates response (user must exist)
+  │  TokenManager.markAuthenticated()
   ▼
-TokenManager.storeToken()
-  │  localStorage['esp32_auth_token'] = JSON.stringify({ token, timestamp: Date.now() })
+TokenManager.markAuthenticated()
+  │  sessionStorage['esp32_auth_meta'] = JSON.stringify({ authenticated: true, timestamp: Date.now() })
   ▼
 AuthSlice: loginUser.fulfilled
-  │  state.token = token
   │  state.isAuthenticated = true
   │  state.user = { username, role }
   ▼
@@ -62,22 +111,24 @@ User sees Dashboard
 
 ### On Failure
 
-- `HttpRequestAgent.login()` **always** calls `TokenManager.clearStoredToken()` on any error to ensure clean state.
-- The error propagates through the Redux thunk to `loginUser.rejected`, which resets `token`, `isAuthenticated`, and `user` to `null`/`false`.
+- `HttpRequestAgent.login()` **always** calls `TokenManager.clearAuthSession()` on any error to ensure clean state.
+- The error propagates through the Redux thunk to `loginUser.rejected`, which resets `isAuthenticated` and `user` to `false`/`null`.
 - `LoginPage.jsx` reads the `error` from Redux state and displays it to the user.
 
 ---
 
-## App Startup / Token Restoration
+## App Startup / Session Restoration
 
 When the app first loads, `AuthGuard.jsx` dispatches `initializeAuth()`:
 
 1. A loading spinner is shown while `isInitializing` is `true` (message: "Initializing ESP32 Connection...").
-2. `TokenManager.getStoredToken()` checks if a token exists in `localStorage`.
-3. If a token exists → `HttpRequestAgent.validateToken()` sends `GET /api/validate-token` with the stored Bearer token.
+2. `TokenManager.hasAuthSession()` checks if session metadata exists in `sessionStorage`.
+3. If metadata exists → `HttpRequestAgent.validateToken()` sends `GET /api/validate-token` (the browser sends the HttpOnly cookie automatically).
 4. If the server confirms validity → Redux state is restored (`isAuthenticated = true`, user info populated).
-5. If invalid or network error → token is cleared from `localStorage`, user sees the login page.
+5. If invalid or network error → session metadata is cleared from `sessionStorage`, user sees the login page.
 6. `isInitializing` transitions from `true` → `false`.
+
+> **Note**: Since the cookie has no `Expires`/`Max-Age`, it is a session cookie. If the user closes the browser entirely, both the cookie and `sessionStorage` are cleared automatically.
 
 ```
 App Mount
@@ -89,11 +140,11 @@ AuthGuard.jsx: useEffect → dispatch(initializeAuth())
 initializeAuth thunk
   │  HttpRequestAgent.validateToken()
   ▼
-Has stored token?
-  ├─ NO  → return { token: null, user: null } → show LoginPage
-  ├─ YES → GET /api/validate-token
-  │          ├─ 200 OK   → return { token, user } → show main app
-  │          └─ Error/401 → clearStoredToken() → show LoginPage
+Has auth session metadata?
+  ├─ NO  → return { authenticated: false, user: null } → show LoginPage
+  ├─ YES → GET /api/validate-token  (cookie sent automatically)
+  │          ├─ 200 OK   → return { authenticated: true, user } → show main app
+  │          └─ Error/401 → clearAuthSession() → show LoginPage
 ```
 
 ---
@@ -102,12 +153,13 @@ Has stored token?
 
 Every HTTP request goes through `HttpClient.request()`:
 
-1. Checks if the request is **not** a login request and `skipAuth` is not set.
-2. Reads the token via `TokenManager.getStoredToken()`.
-3. Injects `Authorization: Bearer <token>` header.
-4. If the endpoint requires auth but no token is available → throws `Authentication required but no token available`.
-5. If the response status is `401` or `403`:
-   - Clears the token from `localStorage`.
+1. Checks if the request requires auth (`skipAuth` is not set).
+2. Checks `TokenManager.hasAuthSession()` — verifies the client-side metadata exists.
+3. If auth is required but no session metadata → throws `Authentication required`.
+4. Sets `credentials: 'same-origin'` — the browser automatically attaches the HttpOnly session cookie.
+5. For POST/PUT/DELETE: automatically adds `X-Requested-With: XMLHttpRequest` (CSRF defense).
+6. If the response status is `401` or `403`:
+   - Clears session metadata from `sessionStorage`.
    - Dispatches a `CustomEvent('auth-error')` on `window`.
    - Throws an `Authentication failed` error.
 
@@ -118,15 +170,17 @@ Any API call (e.g., GET /api/schedule/settings)
   │
   ▼
 HttpClient.request()
-  │  token = TokenManager.getStoredToken()
-  │  headers.Authorization = "Bearer <token>"
+  │  hasAuthSession() → true
+  │  credentials: 'same-origin' (browser sends HttpOnly cookie)
+  │  GET → no extra headers
+  │  POST/PUT/DELETE → adds X-Requested-With: XMLHttpRequest
   ▼
-fetch(url, { headers })
+fetch(url, { credentials: 'same-origin', headers })
   │
   ├─ 200 OK → return response data
   │
   └─ 401/403
-       │  TokenManager.clearStoredToken()
+       │  TokenManager.clearAuthSession()
        │  window.dispatchEvent('auth-error')
        ▼
      authMiddleware catches event
@@ -140,9 +194,9 @@ fetch(url, { headers })
 ## Logout Flow
 
 1. User clicks logout → dispatches `logoutUser()` thunk.
-2. `HttpRequestAgent.logout()` attempts `POST /api/logout` (best effort, 5s timeout).
-3. **Regardless of server response**, `TokenManager.clearStoredToken()` removes the token from `localStorage`.
-4. Redux state is reset: `token = null`, `isAuthenticated = false`, `user = null`.
+2. `HttpRequestAgent.logout()` attempts `POST /api/logout` (best effort, 5s timeout). The server clears the cookie via `Set-Cookie: session=; Max-Age=0`.
+3. **Regardless of server response**, `TokenManager.clearAuthSession()` removes session metadata from `sessionStorage`.
+4. Redux state is reset: `isAuthenticated = false`, `user = null`.
 5. AuthGuard re-renders → shows `LoginPage`.
 
 Even if `logoutUser` is rejected (server error), the Redux reducer still clears all local auth state.
@@ -153,7 +207,7 @@ Even if `logoutUser` is rejected (server error), the Redux reducer still clears 
 
 Defined in `src/config/apiConfig.js`:
 
-| Public (no token needed) | Protected (token required) |
+| Public (no cookie needed) | Protected (cookie required) |
 |---|---|
 | `/api/login` | `/api/schedule/*` |
 | `/api/health` | `/api/bell/*` |
@@ -162,72 +216,91 @@ Defined in `src/config/apiConfig.js`:
 | `/api/wifi/networks` | `/api/validate-token` |
 | `/api/wifi/config` | `/api/refresh-token` |
 
+**CSRF headers required**: All POST/PUT/DELETE requests to protected endpoints must include `Content-Type: application/json` and `X-Requested-With: XMLHttpRequest`.
+
 ---
 
 ## TokenManager — Detailed Reference
 
 **File**: `src/utils/TokenManager.js`  
-**Storage key**: `esp32_auth_token`  
+**Storage key**: `esp32_auth_meta` (in `sessionStorage`)  
 **Singleton**: Exported as a single instance (`export default new TokenManager()`)
 
 ### Storage Format
 
-The token is stored in `localStorage` as a JSON string:
+Session metadata is stored in `sessionStorage` as a JSON string:
 
 ```json
 {
-  "token": "eyJhbGciOiJIUzI1NiIs...",
+  "authenticated": true,
   "timestamp": 1709011200000
 }
 ```
 
-- `token` — The JWT/session token string received from the ESP32 server.
-- `timestamp` — `Date.now()` at the moment of storage, used for age/expiration checks.
+- `authenticated` — Always `true` when present; the record's existence indicates an active session.
+- `timestamp` — `Date.now()` at the moment of login, used for client-side session age checks.
 
-### Methods
+> **Important**: This is *metadata only*. The actual session credential is the HttpOnly cookie managed by the browser — JavaScript never sees it.
+
+### Primary Methods
 
 | Method | Signature | Returns | Description |
 |--------|-----------|---------|-------------|
-| **storeToken** | `storeToken(token: string)` | `boolean` | Validates the token (must be a non-empty string), wraps it with a `timestamp`, and stores as JSON in `localStorage`. Returns `false` on failure. |
-| **getStoredToken** | `getStoredToken()` | `string \| null` | Parses stored JSON, validates the structure (`parsed.token` must exist). Auto-clears corrupted/invalid data and returns `null`. |
-| **getTokenData** | `getTokenData()` | `TokenData \| null` | Returns the full stored object `{ token, timestamp }`. Same validation and auto-cleanup as `getStoredToken()`. |
-| **clearStoredToken** | `clearStoredToken()` | `boolean` | Removes the `esp32_auth_token` key from `localStorage`. Returns `false` if removal fails. |
-| **hasStoredToken** | `hasStoredToken()` | `boolean` | Convenience wrapper: `!!this.getStoredToken()`. |
-| **isStorageAvailable** | `isStorageAvailable()` | `boolean` | Tests `localStorage` read/write with a temporary key (`__storage_test__`). |
-| **getTokenAge** | `getTokenAge()` | `number \| null` | Returns `Date.now() - timestamp` in milliseconds, or `null` if no token is stored. |
-| **isTokenExpired** | `isTokenExpired(maxAge: number)` | `boolean` | Returns `true` if `getTokenAge() > maxAge`. Used by the `tokenValidationMiddleware` with a 24-hour max age (86,400,000 ms). |
+| **markAuthenticated** | `markAuthenticated()` | `boolean` | Stores `{ authenticated: true, timestamp: Date.now() }` in `sessionStorage`. Returns `false` on failure. |
+| **hasAuthSession** | `hasAuthSession()` | `boolean` | Returns `true` if valid session metadata exists in `sessionStorage`. |
+| **clearAuthSession** | `clearAuthSession()` | `boolean` | Removes the `esp32_auth_meta` key from `sessionStorage`. Returns `false` if removal fails. |
+| **getSessionAge** | `getSessionAge()` | `number \| null` | Returns `Date.now() - timestamp` in milliseconds, or `null` if no session metadata exists. |
+| **isSessionExpired** | `isSessionExpired(maxAge: number)` | `boolean` | Returns `true` if `getSessionAge() > maxAge`. Used by `tokenValidationMiddleware` with 24h max age. |
+| **isStorageAvailable** | `isStorageAvailable()` | `boolean` | Tests `sessionStorage` read/write with a temporary key. |
+
+### Legacy Shim Methods
+
+These methods exist for backward compatibility. They delegate to the primary methods above:
+
+| Method | Delegates to | Notes |
+|--------|-------------|-------|
+| `storeToken(token)` | `markAuthenticated()` | Ignores the `token` argument |
+| `getStoredToken()` | `hasAuthSession()` | Returns `'__httponly__'` (truthy placeholder) or `null` |
+| `clearStoredToken()` | `clearAuthSession()` | — |
+| `hasStoredToken()` | `hasAuthSession()` | — |
+| `getTokenAge()` | `getSessionAge()` | — |
+| `isTokenExpired(maxAge)` | `isSessionExpired(maxAge)` | — |
 
 ### Error Resilience
 
 | Scenario | Behavior |
 |----------|----------|
-| Invalid JSON in `localStorage` | Caught by `JSON.parse`, token is auto-cleared via `clearStoredToken()`, returns `null` |
-| Missing `token` field in parsed object | Treated as invalid, auto-cleared, returns `null` |
-| `null`, `undefined`, or non-string passed to `storeToken()` | Throws `'Invalid token provided'`, returns `false` |
-| `localStorage` unavailable (e.g., private browsing) | `isStorageAvailable()` returns `false`; all read/write operations are wrapped in try-catch and fail gracefully |
+| Invalid JSON in `sessionStorage` | Caught by `JSON.parse`, metadata is auto-cleared, returns `null`/`false` |
+| Missing `authenticated` field | Treated as invalid, auto-cleared |
+| `sessionStorage` unavailable | `isStorageAvailable()` returns `false`; all operations fail gracefully |
+| Browser closed | `sessionStorage` is cleared automatically (session scope) |
 
-### Token Lifecycle
+### Session Lifecycle
 
 ```
 Login success
-  └─→ storeToken(token)           — stores { token, timestamp }
+  └─→ markAuthenticated()             — stores { authenticated: true, timestamp }
 
 Every API request
-  └─→ getStoredToken()             — reads token, validates JSON structure
-  └─→ injected as Authorization: Bearer <token>
+  └─→ hasAuthSession()                — checks if client believes it's authenticated
+  └─→ browser sends HttpOnly cookie automatically (credentials: 'same-origin')
 
 401/403 response
-  └─→ clearStoredToken()           — removes from localStorage
+  └─→ clearAuthSession()              — removes metadata from sessionStorage
 
 App startup
-  └─→ getStoredToken()             — checks for existing token
-  └─→ server validates via GET /api/validate-token
+  └─→ hasAuthSession()                — checks for existing session metadata
+  └─→ server validates via GET /api/validate-token (cookie sent automatically)
 
-Token age check (middleware)
-  └─→ isTokenExpired(86400000)     — 24-hour expiration check
+Session age check (middleware)
+  └─→ isSessionExpired(86400000)      — 24-hour client-side expiration check
 
 Logout
-  └─→ clearStoredToken()           — always clears, even if server logout fails
+  └─→ clearAuthSession()              — always clears, even if server logout fails
+
+Browser closed
+  └─→ sessionStorage cleared           — metadata gone
+  └─→ session cookie cleared           — credential gone (no Expires/Max-Age)
 ```
 
 ---
@@ -238,30 +311,30 @@ Logout
 
 ```javascript
 {
-  token: null,              // JWT/session token string from server
-  isAuthenticated: false,   // Derived from token presence
+  isAuthenticated: false,   // Whether the user has an active session
   isLoading: false,         // True during login/logout API calls
-  isInitializing: true,     // True during app startup token validation
+  isInitializing: true,     // True during app startup session validation
   error: null,              // Error message string or null
   user: null                // { username, email?, role?, displayName? }
 }
 ```
 
+> **Note**: There is no `token` field in state. The session credential lives in the HttpOnly cookie, not in Redux.
+
 ### Async Thunks
 
 | Thunk | Trigger | Success | Failure |
 |-------|---------|---------|---------|
-| `loginUser(credentials)` | Login form submit | Sets token, user, `isAuthenticated = true` | Clears all auth state, sets `error` |
+| `loginUser(credentials)` | Login form submit | Sets user, `isAuthenticated = true` | Clears all auth state, sets `error` |
 | `logoutUser()` | Logout button click | Clears all auth state | Clears all auth state + sets `error` |
-| `initializeAuth()` | App mount (`AuthGuard`) | Restores token + user if valid | Clears all auth state |
+| `initializeAuth()` | App mount (`AuthGuard`) | Restores user if session valid | Clears all auth state |
 
 ### Synchronous Reducers
 
 | Reducer | Purpose |
 |---------|---------|
 | `clearAuthError()` | Clears the `error` field |
-| `clearAuthToken()` | Resets `token`, `isAuthenticated`, `user` and calls `TokenManager.clearStoredToken()` |
-| `setAuthFromToken({ token, user })` | Sets auth state from external source (e.g., middleware) |
+| `clearAuthToken()` | Resets `isAuthenticated`, `user` and calls `TokenManager.clearAuthSession()` |
 
 ---
 
@@ -275,7 +348,9 @@ Listens for `auth-error` `CustomEvent` on `window` (dispatched by `HttpClient` o
 
 ### 2. `tokenValidationMiddleware`
 
-Runs after `loginUser/fulfilled` and `initializeAuth/fulfilled` actions. Checks `TokenManager.isTokenExpired(24 * 60 * 60 * 1000)` — if the token is older than 24 hours, dispatches `clearAuthToken()` to force re-authentication.
+Runs after `loginUser/fulfilled` and `initializeAuth/fulfilled` actions. Checks `TokenManager.isSessionExpired(24 * 60 * 60 * 1000)` — if the session metadata is older than 24 hours, dispatches `clearAuthToken()` to force re-authentication.
+
+> This is a client-side hint only. The server independently tracks session expiration and will return 401 for expired sessions regardless of the client-side check.
 
 ---
 
@@ -294,7 +369,21 @@ Component Mount
   └─ isAuthenticated === true  → Render <Navigation /> + app content
 ```
 
-AuthGuard wraps the entire application. No protected route is accessible without a valid token confirmed by the server.
+AuthGuard wraps the entire application. No protected route is accessible without a valid session confirmed by the server.
+
+---
+
+## Security Summary
+
+| Threat | Defense | Layer |
+|--------|---------|-------|
+| **XSS token theft** | HttpOnly cookie — JS cannot read the credential | Server (Set-Cookie) |
+| **CSRF (form-based)** | `SameSite=Strict` cookie + `Content-Type: application/json` enforcement | Server |
+| **CSRF (XHR-based)** | `X-Requested-With: XMLHttpRequest` required header | Client + Server |
+| **Session persistence after browser close** | Session cookie (no Expires) + `sessionStorage` metadata | Browser |
+| **Clickjacking** | `X-Frame-Options: DENY` response header | Server |
+| **MIME sniffing** | `X-Content-Type-Options: nosniff` response header | Server |
+| **Response caching** | `Cache-Control: no-store` response header | Server |
 
 ---
 

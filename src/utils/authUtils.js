@@ -59,7 +59,7 @@ export class AuthUtils {
     } catch (error) {
       console.warn('Auth initialization failed:', error);
       // Clear any corrupted auth state
-      TokenManager.clearStoredToken();
+      TokenManager.clearAuthSession();
     }
   }
 
@@ -76,7 +76,7 @@ export class AuthUtils {
     } catch (error) {
       console.warn('Logout failed:', error);
       // Force clear local state even if server logout fails
-      TokenManager.clearStoredToken();
+      TokenManager.clearAuthSession();
     } finally {
       navigate('/login');
     }

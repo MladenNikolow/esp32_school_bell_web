@@ -1,5 +1,5 @@
 // src/services/__tests__/AuthService.test.js
-// Integration tests for AuthService and API integration
+// Integration tests for AuthService with HttpOnly cookie-based auth
 
 import AuthService from '../AuthService.js';
 import TokenManager from '../../utils/TokenManager.js';
@@ -10,17 +10,16 @@ global.fetch = jest.fn();
 
 describe('AuthService Integration', () => {
   beforeEach(() => {
-    // Clear localStorage and reset mocks
-    localStorage.clear();
+    // Clear sessionStorage and reset mocks
+    sessionStorage.clear();
     fetch.mockClear();
-    TokenManager.clearStoredToken();
+    TokenManager.clearAuthSession();
   });
 
   describe('login', () => {
-    test('successful login stores token and returns user data', async () => {
+    test('successful login marks session and returns user data', async () => {
       const mockCredentials = { username: 'testuser', password: 'testpass' };
       const mockResponse = {
-        token: 'mock-jwt-token',
         user: { username: 'testuser', role: 'user' },
         message: 'Login successful'
       };
@@ -38,19 +37,21 @@ describe('AuthService Integration', () => {
         expect.objectContaining({
           method: 'POST',
           body: JSON.stringify(mockCredentials),
+          credentials: 'same-origin',
         })
       );
 
-      // Verify token storage
-      expect(TokenManager.getStoredToken()).toBe(mockResponse.token);
+      // Verify session is marked as authenticated
+      expect(TokenManager.hasAuthSession()).toBe(true);
       
       // Verify return data
-      expect(result).toEqual(mockResponse);
+      expect(result.user).toEqual(mockResponse.user);
+      expect(result.message).toBe(mockResponse.message);
     });
 
-    test('login failure clears any stored tokens', async () => {
-      // Pre-store a token
-      TokenManager.storeToken('old-token');
+    test('login failure clears any auth session', async () => {
+      // Pre-mark as authenticated
+      TokenManager.markAuthenticated();
       
       const mockCredentials = { username: 'baduser', password: 'badpass' };
 
@@ -62,8 +63,8 @@ describe('AuthService Integration', () => {
 
       await expect(AuthService.login(mockCredentials)).rejects.toThrow();
       
-      // Verify token was cleared
-      expect(TokenManager.getStoredToken()).toBe(null);
+      // Verify session was cleared
+      expect(TokenManager.hasAuthSession()).toBe(false);
     });
 
     test('validates credentials before sending request', async () => {
@@ -86,10 +87,9 @@ describe('AuthService Integration', () => {
   });
 
   describe('logout', () => {
-    test('logout clears token and notifies server', async () => {
-      // Setup: store a token
-      const testToken = 'test-logout-token';
-      TokenManager.storeToken(testToken);
+    test('logout clears session and notifies server', async () => {
+      // Setup: mark as authenticated
+      TokenManager.markAuthenticated();
 
       fetch.mockResolvedValueOnce({
         ok: true,
@@ -103,32 +103,32 @@ describe('AuthService Integration', () => {
         API_CONFIG.ENDPOINTS.LOGOUT,
         expect.objectContaining({
           method: 'POST',
+          credentials: 'same-origin',
         })
       );
 
-      // Verify token cleared
-      expect(TokenManager.getStoredToken()).toBe(null);
+      // Verify session cleared
+      expect(TokenManager.hasAuthSession()).toBe(false);
     });
 
-    test('logout clears token even if server call fails', async () => {
-      // Setup: store a token
-      TokenManager.storeToken('test-token');
+    test('logout clears session even if server call fails', async () => {
+      // Setup: mark as authenticated
+      TokenManager.markAuthenticated();
 
       fetch.mockRejectedValueOnce(new Error('Network error'));
 
       await AuthService.logout();
 
-      // Verify token still cleared despite server error
-      expect(TokenManager.getStoredToken()).toBe(null);
+      // Verify session still cleared despite server error
+      expect(TokenManager.hasAuthSession()).toBe(false);
     });
   });
 
   describe('validateStoredToken', () => {
-    test('validates token with server successfully', async () => {
-      const testToken = 'valid-token';
+    test('validates session with server successfully', async () => {
       const mockUser = { username: 'testuser', role: 'user' };
       
-      TokenManager.storeToken(testToken);
+      TokenManager.markAuthenticated();
 
       fetch.mockResolvedValueOnce({
         ok: true,
@@ -142,12 +142,13 @@ describe('AuthService Integration', () => {
         API_CONFIG.ENDPOINTS.VALIDATE_TOKEN,
         expect.objectContaining({
           method: 'GET',
+          credentials: 'same-origin',
         })
       );
     });
 
-    test('handles invalid token by clearing storage', async () => {
-      TokenManager.storeToken('invalid-token');
+    test('handles invalid session by clearing metadata', async () => {
+      TokenManager.markAuthenticated();
 
       fetch.mockResolvedValueOnce({
         ok: false,
@@ -157,10 +158,10 @@ describe('AuthService Integration', () => {
       const result = await AuthService.validateStoredToken();
 
       expect(result).toEqual({ valid: false });
-      expect(TokenManager.getStoredToken()).toBe(null);
+      expect(TokenManager.hasAuthSession()).toBe(false);
     });
 
-    test('returns invalid when no token stored', async () => {
+    test('returns invalid when no session exists', async () => {
       const result = await AuthService.validateStoredToken();
 
       expect(result).toEqual({ valid: false });
@@ -169,40 +170,27 @@ describe('AuthService Integration', () => {
   });
 
   describe('authentication state management', () => {
-    test('isAuthenticated reflects token presence', () => {
+    test('isAuthenticated reflects session presence', () => {
       expect(AuthService.isAuthenticated()).toBe(false);
 
-      TokenManager.storeToken('test-token');
+      TokenManager.markAuthenticated();
       expect(AuthService.isAuthenticated()).toBe(true);
 
-      AuthService.clearStoredToken();
+      AuthService.clearAuthSession();
       expect(AuthService.isAuthenticated()).toBe(false);
     });
 
-    test('token expiration detection works', () => {
-      // Create expired token data manually
-      const expiredData = {
-        token: 'expired-token',
+    test('session expiration detection works', () => {
+      // Create expired session metadata manually
+      const expiredMeta = {
+        authenticated: true,
         timestamp: Date.now() - (25 * 60 * 60 * 1000) // 25 hours ago
       };
       
-      localStorage.setItem('esp32_auth_token', JSON.stringify(expiredData));
+      sessionStorage.setItem('esp32_auth_meta', JSON.stringify(expiredMeta));
 
       const maxAge = 24 * 60 * 60 * 1000; // 24 hours
-      expect(AuthService.isTokenExpired(maxAge)).toBe(true);
-    });
-
-    test('getAuthHeaders returns correct format', () => {
-      // No token
-      expect(AuthService.getAuthHeaders()).toEqual({});
-
-      // With token
-      const testToken = 'test-auth-header-token';
-      TokenManager.storeToken(testToken);
-      
-      expect(AuthService.getAuthHeaders()).toEqual({
-        Authorization: `Bearer ${testToken}`
-      });
+      expect(AuthService.isSessionExpired(maxAge)).toBe(true);
     });
   });
 

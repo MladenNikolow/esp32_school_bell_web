@@ -52,8 +52,9 @@ class HttpRequestAgent {
 
   /**
    * Make a login request (unauthenticated)
+   * The server responds with a Set-Cookie header containing the HttpOnly session cookie.
    * @param {Object} credentials - Login credentials
-   * @returns {Promise<any>} Authentication response
+   * @returns {Promise<any>} Authentication response (user info, message — no token)
    */
   async login(credentials) {
     try {
@@ -71,21 +72,13 @@ class HttpRequestAgent {
       
       const data = await this._parseResponseBody(response);
       
-      // Validate response
-      if (!data.token) {
-        throw new Error('Invalid server response: missing authentication token');
-      }
-      
-      // Store token using TokenManager
-      const stored = this.tokenManager.storeToken(data.token);
-      if (!stored) {
-        throw new Error('Failed to store authentication token');
-      }
+      // Mark client-side auth metadata (the actual token is in the HttpOnly cookie)
+      this.tokenManager.markAuthenticated();
       
       return data;
     } catch (error) {
       // Ensure clean state on login failure
-      this.tokenManager.clearStoredToken();
+      this.tokenManager.clearAuthSession();
       
       if (error.name === 'TypeError' && error.message.includes('fetch')) {
         throw new Error(API_CONFIG.ERROR_MESSAGES.NETWORK_ERROR);
@@ -96,17 +89,17 @@ class HttpRequestAgent {
   }
 
   /**
-   * Make a logout request and clean up tokens
+   * Make a logout request and clean up session.
+   * The server responds with an expired Set-Cookie to clear the HttpOnly cookie.
    * @returns {Promise<void>}
    */
   async logout() {
     try {
-      // Try to notify server first
-      const token = this.tokenManager.getStoredToken();
-      if (token) {
+      if (this.tokenManager.hasAuthSession()) {
         try {
           await this.httpClient.post(API_CONFIG.ENDPOINTS.LOGOUT, {}, { 
-            timeout: 5000 // Short timeout for logout
+            timeout: 5000,
+            skipAuthErrorHandling: true
           });
         } catch (error) {
           // Ignore server logout errors
@@ -114,48 +107,46 @@ class HttpRequestAgent {
         }
       }
     } finally {
-      // Always clear local token
-      this.tokenManager.clearStoredToken();
+      // Always clear client-side auth metadata
+      this.tokenManager.clearAuthSession();
     }
   }
 
   /**
-   * Validate current token with server
+   * Validate current session with server
    * @returns {Promise<{valid: boolean, user?: any}>}
    */
   async validateToken() {
-    const token = this.tokenManager.getStoredToken();
-    if (!token) {
-      return { valid: false };
-    }
-
     try {
-      const response = await this.httpClient.get(API_CONFIG.ENDPOINTS.VALIDATE_TOKEN, { skipAuthErrorHandling: true });
+      // Always ask the server — the HttpOnly session cookie is the source of truth
+      // and is shared across tabs (unlike sessionStorage).
+      const response = await this.httpClient.get(API_CONFIG.ENDPOINTS.VALIDATE_TOKEN, { skipAuth: true, skipAuthErrorHandling: true });
       
       if (!response.ok) {
-        this.tokenManager.clearStoredToken();
+        this.tokenManager.clearAuthSession();
         return { valid: false };
       }
       
       const data = await this._parseResponseBody(response);
+      this.tokenManager.markAuthenticated();
       return { valid: true, user: data.user };
     } catch (error) {
       console.warn('Token validation failed:', error.message);
-      this.tokenManager.clearStoredToken();
+      this.tokenManager.clearAuthSession();
       return { valid: false };
     }
   }
 
   /**
-   * Check if user is currently authenticated
+   * Check if user is currently authenticated (client-side hint)
    * @returns {boolean}
    */
   isAuthenticated() {
-    return this.tokenManager.hasStoredToken();
+    return this.tokenManager.hasAuthSession();
   }
 
   /**
-   * Get current authentication token
+   * @deprecated Token is HttpOnly — JS cannot read it. Returns placeholder.
    * @returns {string|null}
    */
   getToken() {
@@ -166,7 +157,7 @@ class HttpRequestAgent {
    * Clear authentication state
    */
   clearAuth() {
-    this.tokenManager.clearStoredToken();
+    this.tokenManager.clearAuthSession();
   }
 
   /**

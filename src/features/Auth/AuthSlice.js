@@ -29,35 +29,29 @@ export const logoutUser = createAsyncThunk(
   }
 );
 
-// Async thunk for checking stored token on app initialization
+// Async thunk for checking stored session on app initialization
 export const initializeAuth = createAsyncThunk(
   'auth/initializeAuth',
   async (_, { rejectWithValue }) => {
     try {
       const result = await HttpRequestAgent.validateToken();
       return result.valid ? 
-        { token: TokenManager.getStoredToken(), user: result.user } :
-        { token: null, user: null };
+        { authenticated: true, user: result.user } :
+        { authenticated: false, user: null };
     } catch (err) {
-      // On error, clear stored token and return unauthenticated state
-      TokenManager.clearStoredToken();
-      return { token: null, user: null };
+      // On error, clear auth metadata and return unauthenticated state
+      TokenManager.clearAuthSession();
+      return { authenticated: false, user: null };
     }
   }
 );
 
-// Helper function to get stored token
-export const getStoredToken = () => {
-  return TokenManager.getStoredToken();
-};
-
 const initialState = {
-  token: null,           // Bearer or session token from server
-  isAuthenticated: false, // Computed from token presence
-  isLoading: false,      // For login/logout operations
-  isInitializing: true,  // For app startup token check
-  error: null,           // Authentication error messages
-  user: null             // User information from login response
+  isAuthenticated: false, // Driven by server session cookie validation
+  isLoading: false,       // For login/logout operations
+  isInitializing: true,   // For app startup session check
+  error: null,            // Authentication error messages
+  user: null              // User information from login response
 };
 
 const authSlice = createSlice({
@@ -69,19 +63,17 @@ const authSlice = createSlice({
       state.error = null;
     },
     
-    // Clear stored token (for server auth errors)
+    // Clear authentication state (for server auth errors)
     clearAuthToken(state) {
-      state.token = null;
       state.isAuthenticated = false;
       state.user = null;
-      TokenManager.clearStoredToken();
+      TokenManager.clearAuthSession();
     },
     
-    // Set authentication from external source (e.g., HTTP interceptor)
+    // Set authentication from external source
     setAuthFromToken(state, action) {
-      const { token, user } = action.payload;
-      state.token = token;
-      state.isAuthenticated = !!token;
+      const { user } = action.payload;
+      state.isAuthenticated = true;
       state.user = user || null;
     }
   },
@@ -94,14 +86,12 @@ const authSlice = createSlice({
       })
       .addCase(loginUser.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.token = action.payload.token;
         state.isAuthenticated = true;
         state.user = action.payload.user || null;
         state.error = null;
       })
       .addCase(loginUser.rejected, (state, action) => {
         state.isLoading = false;
-        state.token = null;
         state.isAuthenticated = false;
         state.user = null;
         state.error = action.payload || 'Login failed';
@@ -114,7 +104,6 @@ const authSlice = createSlice({
       })
       .addCase(logoutUser.fulfilled, (state) => {
         state.isLoading = false;
-        state.token = null;
         state.isAuthenticated = false;
         state.user = null;
         state.error = null;
@@ -122,7 +111,6 @@ const authSlice = createSlice({
       .addCase(logoutUser.rejected, (state, action) => {
         state.isLoading = false;
         // Even if logout fails, clear local state
-        state.token = null;
         state.isAuthenticated = false;
         state.user = null;
         state.error = action.payload || 'Logout failed';
@@ -135,14 +123,12 @@ const authSlice = createSlice({
       })
       .addCase(initializeAuth.fulfilled, (state, action) => {
         state.isInitializing = false;
-        state.token = action.payload.token;
-        state.isAuthenticated = !!action.payload.token;
+        state.isAuthenticated = action.payload.authenticated;
         state.user = action.payload.user;
         state.error = null;
       })
       .addCase(initializeAuth.rejected, (state, action) => {
         state.isInitializing = false;
-        state.token = null;
         state.isAuthenticated = false;
         state.user = null;
         state.error = action.payload || 'Initialization failed';
