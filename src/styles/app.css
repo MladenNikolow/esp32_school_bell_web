@@ -222,6 +222,10 @@ body {
   padding: 4px;
   border-radius: 4px;
   transition: background-color 0.2s ease;
+  color: #555;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .password-toggle:hover:not(:disabled) {
@@ -3126,6 +3130,14 @@ body {
 
   .field-error {
     color: #ef9a9a;
+  }
+
+  .password-toggle {
+    color: #bdbdbd;
+  }
+
+  .password-toggle:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.08);
   }
 
   /* Settings page dark mode */
