@@ -1,6 +1,6 @@
 # ESP32 Authentication System - API Specification
 
-This document specifies the HTTP endpoints for the ESP32 IDF firmware. The React frontend authenticates via **HttpOnly session cookies** (no client-side token storage). CSRF protection relies on `SameSite=Strict` cookies plus mandatory request-header checks on state-changing endpoints.
+This document specifies the HTTP endpoints for the ESP32 IDF firmware. The React frontend authenticates via **HttpOnly session cookies** (no client-side token storage). CSRF protection relies on `SameSite=Strict` cookies plus mandatory request-header checks on state-changing endpoints. Two account roles exist: **service** (full access + credential management) and **client** (full access minus credential management).
 
 ---
 
@@ -39,10 +39,13 @@ Response body — **no token field** (the cookie carries the credential):
 {
   "user": {
     "username": "admin",
-    "role": "admin"
+    "role": "service"
   },
   "message": "Login successful"
 }
+```
+
+`role` is `"service"` or `"client"` depending on which account matched.
 ```
 
 **Error Responses:**
@@ -105,9 +108,12 @@ Cookie: session=<opaque_token>        (sent automatically by the browser)
   "valid": true,
   "user": {
     "username": "admin",
-    "role": "admin"
+    "role": "service"
   }
 }
+```
+
+`role` is `"service"` or `"client"`.
 ```
 
 **Error Responses:**
@@ -348,6 +354,83 @@ For CORS preflight requests, respond with:
 - Implement rate limiting on `/api/login` (max 5 attempts per minute)
 - Use HTTPS in production (ESP32 supports TLS via `esp_tls`)
 - Validate and sanitize all input data before processing
+
+---
+
+## 👥 **Credential Management Endpoints**
+
+These endpoints are only accessible to the **service** role. Client-role sessions receive `403 Forbidden`.
+
+#### **GET /api/system/credentials**
+**Purpose**: Check whether a client account exists
+**Access**: Authenticated (service role only)
+
+**Success Response (200):**
+```json
+{
+  "clientExists": true,
+  "clientUsername": "teacher"
+}
+```
+If no client account: `{ "clientExists": false }`
+
+---
+
+#### **POST /api/system/credentials**
+**Purpose**: Create or update client account
+**Access**: Authenticated (service role only)
+
+**Request Headers:**
+```
+Content-Type: application/json
+X-Requested-With: XMLHttpRequest
+```
+
+**Request Body:**
+```json
+{
+  "username": "teacher",
+  "password": "securepass"
+}
+```
+- `username`: 1–31 characters
+- `password`: minimum 8 characters
+
+**Success Response (200):**
+```json
+{ "status": "ok", "message": "Client credentials saved" }
+```
+
+All active sessions are invalidated after this operation.
+
+**Error Responses:**
+- **400 Bad Request**: Invalid username or password
+- **403 Forbidden**: Not service role
+- **500 Internal Server Error**: Storage failure
+
+---
+
+#### **DELETE /api/system/credentials**
+**Purpose**: Delete client account
+**Access**: Authenticated (service role only)
+
+**Request Headers:**
+```
+Content-Type: application/json
+X-Requested-With: XMLHttpRequest
+```
+
+**Success Response (200):**
+```json
+{ "status": "ok", "message": "Client credentials deleted" }
+```
+
+All active sessions are invalidated after this operation.
+
+**Error Responses:**
+- **403 Forbidden**: Not service role
+- **404 Not Found**: No client account exists
+- **500 Internal Server Error**: Storage failure
 
 ### **Error Handling**
 - Always return proper HTTP status codes

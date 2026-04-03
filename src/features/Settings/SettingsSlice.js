@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import ScheduleService from '../../services/ScheduleService.js';
+import CredentialService from '../../services/CredentialService.js';
 import httpRequestAgent from '../../utils/HttpRequestAgent.js';
 import { API_CONFIG } from '../../config/apiConfig.js';
 
@@ -60,6 +61,35 @@ export const saveWifiCredentials = createAsyncThunk(
   }
 );
 
+export const fetchCredentials = createAsyncThunk(
+  'settings/fetchCredentials',
+  async () => {
+    return CredentialService.getCredentials();
+  }
+);
+
+export const saveCredentials = createAsyncThunk(
+  'settings/saveCredentials',
+  async ({ username, password }, { rejectWithValue }) => {
+    try {
+      return await CredentialService.saveCredentials(username, password);
+    } catch (err) {
+      return rejectWithValue(err.message || 'Failed to save credentials');
+    }
+  }
+);
+
+export const deleteCredentials = createAsyncThunk(
+  'settings/deleteCredentials',
+  async (_, { rejectWithValue }) => {
+    try {
+      return await CredentialService.deleteCredentials();
+    } catch (err) {
+      return rejectWithValue(err.message || 'Failed to delete credentials');
+    }
+  }
+);
+
 const settingsSlice = createSlice({
   name: 'settings',
   initialState: {
@@ -77,6 +107,10 @@ const settingsSlice = createSlice({
     currentPin: null,
     pinLoading: false,
     pinSaving: false,
+    clientCredentials: null,
+    credentialsLoading: false,
+    credentialsSaving: false,
+    credentialsDeleting: false,
   },
   reducers: {
     clearError: (state) => { state.error = null; },
@@ -169,6 +203,40 @@ const settingsSlice = createSlice({
       .addCase(saveWifiCredentials.rejected, (state, { error }) => {
         state.wifiSaving = false;
         state.error = error.message;
+      })
+      .addCase(fetchCredentials.pending, (state) => {
+        state.credentialsLoading = true;
+      })
+      .addCase(fetchCredentials.fulfilled, (state, { payload }) => {
+        state.credentialsLoading = false;
+        state.clientCredentials = payload;
+      })
+      .addCase(fetchCredentials.rejected, (state, { error }) => {
+        state.credentialsLoading = false;
+        if (error.name !== 'AbortError') state.error = error.message;
+      })
+      .addCase(saveCredentials.pending, (state) => {
+        state.credentialsSaving = true;
+      })
+      .addCase(saveCredentials.fulfilled, (state) => {
+        state.credentialsSaving = false;
+        state.actionSuccess = 'Client account saved';
+      })
+      .addCase(saveCredentials.rejected, (state, action) => {
+        state.credentialsSaving = false;
+        state.error = action.payload || action.error.message;
+      })
+      .addCase(deleteCredentials.pending, (state) => {
+        state.credentialsDeleting = true;
+      })
+      .addCase(deleteCredentials.fulfilled, (state) => {
+        state.credentialsDeleting = false;
+        state.clientCredentials = { clientExists: false, clientUsername: '' };
+        state.actionSuccess = 'Client account deleted';
+      })
+      .addCase(deleteCredentials.rejected, (state, action) => {
+        state.credentialsDeleting = false;
+        state.error = action.payload || action.error.message;
       });
   },
 });

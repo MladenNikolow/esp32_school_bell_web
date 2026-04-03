@@ -29,6 +29,7 @@ src/
 │
 ├── services/                          # 🔧 Services Layer
 │   ├── AuthService.js                # Authentication API calls
+│   ├── CredentialService.js          # Client credential management API calls
 │   ├── ErrorHandlingService.js       # Error processing
 │   └── __tests__/
 │       └── AuthService.test.js
@@ -214,9 +215,9 @@ To add a new feature:
 Example:
 ```
 src/features/Settings/
-├── SettingsPage.jsx
+├── SettingsPage.jsx              # Settings UI (schedule, PIN, credentials, WiFi, system)
 ├── SettingsPage.css
-├── SettingsSlice.js
+├── SettingsSlice.js              # Settings state (includes credential management thunks)
 └── README.md
 ```
 

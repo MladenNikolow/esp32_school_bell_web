@@ -41,6 +41,7 @@ export const API_CONFIG = {
     SYSTEM_FACTORY_RESET: '/api/system/factory-reset',
     SYSTEM_SYNC_TIME: '/api/system/sync-time',
     SYSTEM_PIN: '/api/system/pin',
+    SYSTEM_CREDENTIALS: '/api/system/credentials',
     SCHEDULE_DEFAULTS: '/api/schedule/defaults',
   },
   

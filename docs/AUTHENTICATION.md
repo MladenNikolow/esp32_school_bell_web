@@ -2,7 +2,7 @@
 
 ## Architecture Overview
 
-The authentication system uses **HttpOnly session cookies** set by the ESP32 server. The client never sees or stores the actual session token — the browser manages it automatically. A `sessionStorage` metadata record tracks the *fact* of authentication for UI purposes.
+The authentication system uses **HttpOnly session cookies** set by the ESP32 server. The client never sees or stores the actual session token — the browser manages it automatically. A `sessionStorage` metadata record tracks the *fact* of authentication for UI purposes. The system supports **dual-account role-based access** (service and client roles).
 
 | Layer | File | Responsibility |
 |-------|------|----------------|
@@ -91,6 +91,7 @@ HttpClient.request()
 ESP32 Server responds
   │  Set-Cookie: session=<opaque_token>; HttpOnly; SameSite=Strict; Path=/
   │  Body: { user: { username, role }, message: "Login successful" }
+  │  role is "service" or "client" depending on which account matched
   ▼
 HttpRequestAgent.login()
   │  Validates response (user must exist)
@@ -207,16 +208,40 @@ Even if `logoutUser` is rejected (server error), the Redux reducer still clears 
 
 Defined in `src/config/apiConfig.js`:
 
-| Public (no cookie needed) | Protected (cookie required) |
-|---|---|
-| `/api/login` | `/api/schedule/*` |
-| `/api/health` | `/api/bell/*` |
-| `/api/status` | `/api/system/*` |
-| `/api/wifi/status` | `/api/logout` |
-| `/api/wifi/networks` | `/api/validate-token` |
-| `/api/wifi/config` | `/api/refresh-token` |
+| Public (no cookie needed) | Protected (cookie required) | Protected (service role only) |
+|---|---|---|
+| `/api/login` | `/api/schedule/*` | `/api/system/credentials` (GET/POST/DELETE) |
+| `/api/health` | `/api/bell/*` | |
+| `/api/status` | `/api/system/*` | |
+| `/api/wifi/status` | `/api/logout` | |
+| `/api/wifi/networks` | `/api/validate-token` | |
+| `/api/wifi/config` | `/api/refresh-token` | |
 
 **CSRF headers required**: All POST/PUT/DELETE requests to protected endpoints must include `Content-Type: application/json` and `X-Requested-With: XMLHttpRequest`.
+
+---
+
+## Dual-Account Model & Role-Based Access
+
+The server returns a `role` field in the login/validate responses: `"service"` or `"client"`.
+
+| Role | Access | Credential Management |
+|------|--------|-----------------------|
+| `service` | Full system access | Can create/update/delete client account |
+| `client` | Full system access | Cannot manage credentials |
+
+### Frontend Role Handling
+- `AuthSlice.js` stores `state.auth.user.role` from the server response
+- `SettingsPage.jsx` checks `user.role === 'service'` to conditionally render the User Management section
+- `CredentialService.js` provides `getCredentials()`, `saveCredentials()`, `deleteCredentials()` API calls
+- `SettingsSlice.js` has `fetchCredentials`, `saveCredentials`, `deleteCredentials` async thunks
+
+### Credential Management (Service Role Only)
+| Action | Endpoint | Service |
+|--------|----------|---------|
+| Check client exists | `GET /api/system/credentials` | `CredentialService.getCredentials()` |
+| Create/update client | `POST /api/system/credentials` | `CredentialService.saveCredentials(username, password)` |
+| Delete client | `DELETE /api/system/credentials` | `CredentialService.deleteCredentials()` |
 
 ---
 

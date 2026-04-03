@@ -219,6 +219,27 @@ const en = {
   'settings.pinInvalidFormat': 'PIN must be 4 to 6 digits.',
   'settings.pinMismatch': 'PINs do not match.',
 
+  // Client credentials
+  'settings.credTitle': 'User Management',
+  'settings.credDesc': 'Manage client account credentials. Only the service account can create or modify the client account.',
+  'settings.credCurrentClient': 'Current client',
+  'settings.credNoAccount': 'No client account',
+  'settings.credCreate': 'Create Client Account',
+  'settings.credUpdate': 'Update Client Account',
+  'settings.credUsername': 'Username',
+  'settings.credUsernamePlaceholder': 'Client username',
+  'settings.credPassword': 'Password',
+  'settings.credPasswordPlaceholder': 'Min. 8 characters',
+  'settings.credConfirmPassword': 'Confirm Password',
+  'settings.credSave': 'Save Credentials',
+  'settings.credSaving': 'Saving...',
+  'settings.credDelete': 'Delete Account',
+  'settings.credDeleting': 'Deleting...',
+  'settings.credDeleteConfirm': 'Are you sure you want to delete the client account?',
+  'settings.credUsernameInvalid': 'Username must be 1–31 characters.',
+  'settings.credPasswordMin': 'Password must be at least 8 characters.',
+  'settings.credPasswordMismatch': 'Passwords do not match.',
+
   // Calendar
   'calendar.holidays': 'Holidays',
   'calendar.exceptions': 'Exceptions',

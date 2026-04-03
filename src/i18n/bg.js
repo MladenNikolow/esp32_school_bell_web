@@ -219,6 +219,27 @@ const bg = {
   'settings.pinInvalidFormat': 'ПИН-ът трябва да е от 4 до 6 цифри.',
   'settings.pinMismatch': 'ПИН-овете не съвпадат.',
 
+  // Клиентски акаунт
+  'settings.credTitle': 'Управление на потребители',
+  'settings.credDesc': 'Управление на клиентски акаунт. Само сервизният акаунт може да създава или променя клиентския акаунт.',
+  'settings.credCurrentClient': 'Текущ клиент',
+  'settings.credNoAccount': 'Няма клиентски акаунт',
+  'settings.credCreate': 'Създаване на клиентски акаунт',
+  'settings.credUpdate': 'Промяна на клиентски акаунт',
+  'settings.credUsername': 'Потребителско име',
+  'settings.credUsernamePlaceholder': 'Име на клиента',
+  'settings.credPassword': 'Парола',
+  'settings.credPasswordPlaceholder': 'Мин. 8 символа',
+  'settings.credConfirmPassword': 'Потвърди парола',
+  'settings.credSave': 'Запази данни',
+  'settings.credSaving': 'Запазване...',
+  'settings.credDelete': 'Изтрий акаунт',
+  'settings.credDeleting': 'Изтриване...',
+  'settings.credDeleteConfirm': 'Сигурни ли сте, че искате да изтриете клиентския акаунт?',
+  'settings.credUsernameInvalid': 'Потребителското име трябва да е от 1 до 31 символа.',
+  'settings.credPasswordMin': 'Паролата трябва да е поне 8 символа.',
+  'settings.credPasswordMismatch': 'Паролите не съвпадат.',
+
   // Calendar
   'calendar.holidays': 'Празници',
   'calendar.exceptions': 'Изключения',
