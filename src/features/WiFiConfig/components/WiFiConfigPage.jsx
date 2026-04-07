@@ -55,12 +55,12 @@ export default function WiFiConfigPage() {
   const handleConnectNetwork = (network) => {
     if (!network.secured && !password) {
       setSubmittedSsid(network.ssid);
-      dispatch(saveWifiConfig({ ssid: network.ssid, password: '' }));
+      dispatch(saveWifiConfig({ ssid: network.ssid, password: '', bssid: network.bssid }));
       return;
     }
     if (network.secured && !password) return;
     setSubmittedSsid(network.ssid);
-    dispatch(saveWifiConfig({ ssid: network.ssid, password }));
+    dispatch(saveWifiConfig({ ssid: network.ssid, password, bssid: network.bssid }));
   };
 
   const handleManualConnect = (e) => {

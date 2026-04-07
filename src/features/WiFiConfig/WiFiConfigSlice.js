@@ -25,8 +25,10 @@ export const fetchNetworks = createAsyncThunk(
 
 export const saveWifiConfig = createAsyncThunk(
   'wifiConfig/saveWifiConfig',
-  async ({ ssid, password }) => {
-    const data = await httpRequestAgent.post(API_CONFIG.ENDPOINTS.WIFI_CONFIG, { ssid, password });
+  async ({ ssid, password, bssid }) => {
+    const payload = { ssid, password };
+    if (bssid) payload.bssid = bssid;
+    const data = await httpRequestAgent.post(API_CONFIG.ENDPOINTS.WIFI_CONFIG, payload);
     return data;
   }
 );
