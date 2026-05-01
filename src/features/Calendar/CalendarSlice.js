@@ -112,9 +112,10 @@ const calendarSlice = createSlice({
         if (error.name !== 'AbortError') state.error = error.message;
       })
       .addCase(saveTemplates.pending, (state) => { state.saving = true; state.saveSuccess = false; })
-      .addCase(saveTemplates.fulfilled, (state) => {
+      .addCase(saveTemplates.fulfilled, (state, { payload }) => {
         state.saving = false;
         state.saveSuccess = true;
+        state.templates = payload.templates ?? payload;
       })
       .addCase(saveTemplates.rejected, (state, { error }) => {
         state.saving = false;

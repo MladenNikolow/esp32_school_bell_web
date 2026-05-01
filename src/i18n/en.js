@@ -296,6 +296,23 @@ const en = {
   'calendar.qa_saturdayWorking': 'Next Sat. Working',
   'calendar.min': 'min',
 
+  // Templates
+  'calendar.bellTemplates': 'Bell Templates',
+  'calendar.addTemplate': '+ Add Template',
+  'calendar.editTemplate': 'Edit',
+  'calendar.deleteTemplate': 'Delete',
+  'calendar.templateName': 'Template name',
+  'calendar.saveTemplates': 'Save Templates',
+  'calendar.templateSlot': 'Template {n}',
+  'calendar.noTemplateSet': 'Not configured',
+  'calendar.templatesSaved': 'Templates saved',
+  'calendar.applyTemplate': 'Apply',
+  'calendar.templatesConfigured': 'templates configured',
+  'calendar.normalDay': 'Normal Day',
+  'calendar.dayOff': 'Day Off',
+  'calendar.applyTemplateDate': 'Apply on date',
+  'calendar.selectDate': 'Select date',
+
   // WiFi Config
   'wifi.title': 'Ringy — WiFi Setup',
   'wifi.savedMsg': 'Credentials saved! The device is restarting and will connect to <strong>{ssid}</strong>.',

@@ -3,7 +3,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import {
   fetchHolidays, saveHolidays,
   fetchExceptions, saveExceptions,
-  fetchTemplates,
+  fetchTemplates, saveTemplates,
   setHolidays, setExceptions, setCustomBellSets,
   clearError, clearSaveSuccess,
 } from './CalendarSlice.js';
@@ -125,26 +125,44 @@ export default function CalendarPage() {
 
   const [expandedEx, setExpandedEx] = useState({});
 
-  // Quick actions
-  const getDateStr = (offsetDays) => {
-    const d = new Date();
-    d.setDate(d.getDate() + offsetDays);
-    return d.toISOString().slice(0, 10);
-  };
-  const getNextSaturday = () => {
-    const d = new Date();
-    const day = d.getDay();
-    d.setDate(d.getDate() + (6 - day + (day === 6 ? 7 : 0)));
-    return d.toISOString().slice(0, 10);
-  };
+  // Template management state
+  const [localTemplates, setLocalTemplates] = useState([]);
+  const [templatesOpen, setTemplatesOpen] = useState(false);
+  const [editingSlot, setEditingSlot] = useState(null);
+  const [draftTemplate, setDraftTemplate] = useState({ name: '', bells: [] });
+  const [templatesDirty, setTemplatesDirty] = useState(false);
 
-  const quickAction = (label, overrides) => {
-    // Check if an exception already exists for the same date
-    const date = overrides.startDate;
-    if (exceptions.some(e => e.startDate === date && !e.endDate)) {
-      return; // Already exists
-    }
-    addException({ label, ...overrides });
+  useEffect(() => {
+    setLocalTemplates(templates);
+    setTemplatesDirty(false);
+  }, [templates]);
+
+  // Quick-action date picker state
+  const [pickerTarget, setPickerTarget] = useState(null); // { label, action, templateIdx? }
+  const [pickerDate, setPickerDate] = useState('');
+
+  const openPicker = (label, action, templateIdx) => {
+    setPickerDate(new Date().toISOString().slice(0, 10));
+    setPickerTarget({ label, action, ...(templateIdx !== undefined ? { templateIdx } : {}) });
+  };
+  const closePicker = () => setPickerTarget(null);
+
+  const applyPicker = () => {
+    if (!pickerTarget || !pickerDate) return;
+    const { label, action, templateIdx } = pickerTarget;
+    const newEx = {
+      startDate: pickerDate,
+      endDate: '',
+      label,
+      action,
+      timeOffsetMin: 0,
+      templateIdx: templateIdx ?? 0,
+      customBellsIdx: -1,
+    };
+    const updated = [...exceptions, newEx];
+    dispatch(setExceptions(updated));
+    dispatch(saveExceptions({ exceptions: updated, customBellSets }));
+    closePicker();
   };
 
   const handleSaveExceptions = () =>
@@ -153,6 +171,36 @@ export default function CalendarPage() {
   // Get bells for a custom bell set index
   const getCustomBells = (idx) =>
     (idx >= 0 && idx < customBellSets.length) ? customBellSets[idx].bells || [] : [];
+
+  // Template management handlers
+  const handleEditSlot = (slotIdx) => {
+    const existing = localTemplates[slotIdx];
+    setDraftTemplate(existing
+      ? { name: existing.name, bells: existing.bells ? [...existing.bells] : [] }
+      : { name: t('calendar.templateSlot', { n: slotIdx + 1 }), bells: [] }
+    );
+    setEditingSlot(slotIdx);
+  };
+  const handleCancelEdit = () => {
+    setEditingSlot(null);
+    setDraftTemplate({ name: '', bells: [] });
+  };
+  const handleApplyEdit = () => {
+    if (!draftTemplate.name.trim()) return;
+    const updated = [...localTemplates];
+    updated[editingSlot] = { name: draftTemplate.name.trim(), bells: draftTemplate.bells };
+    setLocalTemplates(updated);
+    setTemplatesDirty(true);
+    setEditingSlot(null);
+    setDraftTemplate({ name: '', bells: [] });
+  };
+  const handleDeleteTemplate = (slotIdx) => {
+    setLocalTemplates(localTemplates.filter((_, i) => i !== slotIdx));
+    setTemplatesDirty(true);
+  };
+  const handleSaveTemplates = () => {
+    dispatch(saveTemplates({ templates: localTemplates }));
+  };
 
   if (loading && holidays.length === 0 && exceptions.length === 0) {
     return <div className="calendar-page"><div className="loading-text">{t('calendar.loading')}</div></div>;
@@ -228,30 +276,123 @@ export default function CalendarPage() {
           <h3>{t('calendar.exceptionsTitle')}</h3>
           <p className="card-desc">{t('calendar.exceptionsDesc')}</p>
 
-          {/* Quick Actions */}
+          {/* Bell Templates */}
+          <div className="template-mgmt-section">
+            <button className="template-mgmt-toggle" onClick={() => setTemplatesOpen(o => !o)}>
+              <span>{templatesOpen ? '▼' : '▶'} {t('calendar.bellTemplates')}</span>
+              <span className="template-mgmt-hint">
+                {localTemplates.length > 0
+                  ? `${localTemplates.length}/3 ${t('calendar.templatesConfigured')}`
+                  : t('calendar.noTemplateSet')}
+              </span>
+            </button>
+            {templatesOpen && (
+              <div className="template-mgmt-body">
+                {[0, 1, 2].map((slotIdx) => {
+                  const tpl = localTemplates[slotIdx];
+                  const isEditing = editingSlot === slotIdx;
+                  return (
+                    <div key={slotIdx} className={`template-slot ${tpl ? 'template-slot-filled' : 'template-slot-empty'}`}>
+                      <div className="template-slot-row">
+                        <span className="template-slot-label">{t('calendar.templateSlot', { n: slotIdx + 1 })}</span>
+                        {tpl ? (
+                          <>
+                            <span className="template-slot-name">{tpl.name}</span>
+                            <button className="template-icon-btn" onClick={() => handleEditSlot(slotIdx)} title={t('calendar.editTemplate')}>✎</button>
+                            <button className="template-icon-btn template-icon-delete" onClick={() => handleDeleteTemplate(slotIdx)} title={t('calendar.deleteTemplate')}>×</button>
+                          </>
+                        ) : (
+                          <button className="add-btn template-add-inline" onClick={() => handleEditSlot(slotIdx)}>
+                            {t('calendar.addTemplate')}
+                          </button>
+                        )}
+                      </div>
+                      {isEditing && (
+                        <div className="template-inline-editor">
+                          <div className="template-name-row">
+                            <label className="template-name-label">{t('calendar.templateName')}</label>
+                            <input
+                              className="template-name-input"
+                              value={draftTemplate.name}
+                              onChange={(e) => setDraftTemplate(d => ({ ...d, name: e.target.value }))}
+                              maxLength={31}
+                              placeholder={t('calendar.templateSlot', { n: slotIdx + 1 })}
+                              autoFocus
+                            />
+                          </div>
+                          <BellScheduleEditor
+                            bells={draftTemplate.bells}
+                            onChangeBells={(bells) => setDraftTemplate(d => ({ ...d, bells }))}
+                            compact
+                          />
+                          <div className="template-editor-actions">
+                            <button className="save-button" onClick={handleApplyEdit} disabled={!draftTemplate.name.trim()}>
+                              {t('calendar.applyTemplate')}
+                            </button>
+                            <button className="secondary-btn" onClick={handleCancelEdit}>
+                              {t('dashboard.cancel')}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+                <div className="template-mgmt-footer">
+                  <button className="save-button" onClick={handleSaveTemplates} disabled={saving || !templatesDirty}>
+                    {saving ? t('calendar.saving') : t('calendar.saveTemplates')}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Quick Actions — template buttons */}
           <div className="quick-actions">
             <span className="quick-actions-label">{t('calendar.quickActions')}</span>
-            <button className="quick-action-btn quick-action-off"
-              onClick={() => quickAction(t('calendar.qa_todayOff'), { startDate: getDateStr(0), action: 'day-off' })}>
-              {t('calendar.qa_todayOff')}
-            </button>
-            <button className="quick-action-btn quick-action-off"
-              onClick={() => quickAction(t('calendar.qa_tomorrowOff'), { startDate: getDateStr(1), action: 'day-off' })}>
-              {t('calendar.qa_tomorrowOff')}
-            </button>
-            <button className="quick-action-btn quick-action-short"
-              onClick={() => quickAction(t('calendar.qa_shortToday'), { startDate: getDateStr(0), action: 'first-shift' })}>
-              {t('calendar.qa_shortToday')}
-            </button>
-            <button className="quick-action-btn quick-action-short"
-              onClick={() => quickAction(t('calendar.qa_shortTomorrow'), { startDate: getDateStr(1), action: 'first-shift' })}>
-              {t('calendar.qa_shortTomorrow')}
-            </button>
+            {/* Built-in: Normal Day */}
             <button className="quick-action-btn quick-action-work"
-              onClick={() => quickAction(t('calendar.qa_saturdayWorking'), { startDate: getNextSaturday(), action: 'normal' })}>
-              {t('calendar.qa_saturdayWorking')}
+              onClick={() => openPicker(t('calendar.normalDay'), 'normal')}>
+              {t('calendar.normalDay')}
             </button>
+            {/* Built-in: Day Off */}
+            <button className="quick-action-btn quick-action-off"
+              onClick={() => openPicker(t('calendar.dayOff'), 'day-off')}>
+              {t('calendar.dayOff')}
+            </button>
+            {/* Custom templates (only if set) */}
+            {localTemplates.map((tpl, ti) => (
+              <button key={ti} className="quick-action-btn quick-action-template"
+                onClick={() => openPicker(tpl.name, 'template', ti)}>
+                {tpl.name}
+              </button>
+            ))}
           </div>
+
+          {/* Date picker popover */}
+          {pickerTarget && (
+            <div className="quick-picker-overlay" onClick={closePicker}>
+              <div className="quick-picker-dialog" onClick={(e) => e.stopPropagation()}>
+                <p className="quick-picker-title">{t('calendar.applyTemplateDate')}</p>
+                <p className="quick-picker-label">{pickerTarget.label}</p>
+                <input
+                  type="date"
+                  className="date-picker quick-picker-input"
+                  value={pickerDate}
+                  onChange={(e) => setPickerDate(e.target.value)}
+                  autoFocus
+                />
+                <div className="quick-picker-actions">
+                  <button className="save-button" onClick={applyPicker} disabled={!pickerDate || saving}>
+                    {saving ? t('calendar.saving') : t('calendar.applyTemplate')}
+                  </button>
+                  <button className="secondary-btn" onClick={closePicker}>
+                    {t('dashboard.cancel')}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           <p className="card-desc card-desc-note">{t('calendar.expiredNote')}</p>
           {exceptions.length === 0 ? (

@@ -296,6 +296,23 @@ const bg = {
   'calendar.qa_saturdayWorking': 'Следв. събота работна',
   'calendar.min': 'мин',
 
+  // Templates
+  'calendar.bellTemplates': 'Шаблони за звънци',
+  'calendar.addTemplate': '+ Добави шаблон',
+  'calendar.editTemplate': 'Редактирай',
+  'calendar.deleteTemplate': 'Изтрий',
+  'calendar.templateName': 'Име на шаблон',
+  'calendar.saveTemplates': 'Запази шаблони',
+  'calendar.templateSlot': 'Шаблон {n}',
+  'calendar.noTemplateSet': 'Не е настроен',
+  'calendar.templatesSaved': 'Шаблоните са запазени',
+  'calendar.applyTemplate': 'Приложи',
+  'calendar.templatesConfigured': 'шаблона настроени',
+  'calendar.normalDay': 'Работен ден',
+  'calendar.dayOff': 'Неучебен ден',
+  'calendar.applyTemplateDate': 'Приложи за дата',
+  'calendar.selectDate': 'Избери дата',
+
   // WiFi Config
   'wifi.title': 'Ringy — WiFi настройка',
   'wifi.savedMsg': 'Данните са запазени! Устройството се рестартира и ще се свърже с <strong>{ssid}</strong>.',
