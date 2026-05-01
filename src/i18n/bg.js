@@ -55,9 +55,9 @@ const bg = {
   'dayType.exceptionHoliday': 'Празник (изключение)',
 
   // Bell states
-  'bellState.idle': 'Изчакване',
+  'bellState.idle': 'Неактивен',
   'bellState.ringing': 'Звъни',
-  'bellState.panic': 'АВАРИЯ',
+  'bellState.panic': 'ПАНИКА',
 
   // Status panel
   'statusPanel.bellState': 'Състояние',
