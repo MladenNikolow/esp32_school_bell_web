@@ -1,228 +1,233 @@
-# ESP32 Authentication System - Project Structure
+﻿# ESP32 School Bell — Web Frontend Project Structure
 
-## 📁 Feature Organization
+## Tech Stack
 
-The project is organized into separate feature folders with clear separation of concerns:
+- **React 18** + **Redux Toolkit** (RTK) — component UI and state management
+- **Vite** — build tool; output to `dist/` then bundled into FatFS partition
+- **CSS** — all styles in `src/styles/app.css` (no CSS modules)
+- **i18n** — plain JS object dictionaries (`en.js` / `bg.js`), accessed via `useLocale` hook
+
+---
+
+## File Tree
 
 ```
 src/
-├── features/
-│   ├── Auth/                          # 🔐 Authentication Feature
-│   │   ├── components/
-│   │   │   ├── LoginPage.jsx         # Login form UI
-│   │   │   ├── LoginPage.css         # Login styling
-│   │   │   ├── AuthGuard.jsx         # Route protection
-│   │   │   ├── AuthGuard.css         # Loading screen
-│   │   │   └── __tests__/
-│   │   │       └── LoginPage.test.jsx
-│   │   ├── AuthSlice.js              # Auth state management
-│   │   └── README.md
-│   │
-│   ├── Home/                          # 🏠 Home Feature
-│   │   ├── HomePage.jsx              # Main app interface
-│   │   ├── HomePage.css              # Home styling
-│   │   └── README.md
-│   │
-│   └── App/                           # 📱 App Feature (existing)
-│       ├── App.jsx                   # Main app component
-│       └── AppSlice.jsx              # Mode control state
+├── app/
+│   └── store.js                     Redux store — slices: mode, auth, wifiConfig, dashboard, schedule, settings
 │
-├── services/                          # 🔧 Services Layer
-│   ├── AuthService.js                # Authentication API calls
-│   ├── CredentialService.js          # Client credential management API calls
-│   ├── ErrorHandlingService.js       # Error processing
+├── components/
+│   └── RingyLogo.jsx                Shared logo component
+│
+├── config/
+│   └── apiConfig.js                 All API endpoint paths + public-endpoint list
+│
+├── features/
+│   ├── App/
+│   │   ├── App.jsx                  Root component; chooses between AuthGuard / WiFiConfigPage
+│   │   └── AppSlice.jsx             mode slice (device mode control)
+│   │
+│   ├── Auth/
+│   │   ├── AuthSlice.js             auth slice — loginUser, logoutUser, initializeAuth thunks
+│   │   └── components/
+│   │       ├── AuthGuard.jsx        Session validation on startup; renders nav + active tab page
+│   │       ├── LoginPage.jsx        Login form
+│   │       └── __tests__/
+│   │           └── LoginPage.test.jsx
+│   │
+│   ├── Dashboard/
+│   │   ├── DashboardPage.jsx        Live clock, bell status, test bell, panic toggle
+│   │   ├── DashboardSlice.js        dashboard slice — fetchBellStatus, togglePanic
+│   │   └── DeviceClock.jsx          Clock polling /api/status
+│   │
+│   ├── Navigation/
+│   │   └── Navigation.jsx           Top tab bar — tabs: dashboard | schedule | settings
+│   │
+│   ├── Schedule/
+│   │   ├── SchedulePage.jsx         Sub-tab container (Today / Default / Templates / Exceptions)
+│   │   ├── ScheduleSlice.js         Unified schedule + settings slice (see State Shape below)
+│   │   ├── TimezonePicker.jsx       Timezone picker with POSIX presets + custom input
+│   │   ├── components/
+│   │   │   ├── BellSetEditor.jsx    Reusable bell-set editor (manual / applyTpl / auto-generate)
+│   │   │   ├── TimePicker24.jsx     24h HH:MM picker with step buttons
+│   │   │   │
+│   │   │   │ ── DEAD CODE (Phase 5 replaced these) ──
+│   │   │   ├── BellTimesEditor.jsx
+│   │   │   ├── HolidaysEditor.jsx
+│   │   │   ├── ExceptionsEditor.jsx
+│   │   │   ├── SettingsEditor.jsx
+│   │   │   ├── ScheduleDashboard.jsx
+│   │   │   └── BellStatusPanel.jsx
+│   │   │
+│   │   ├── subtabs/
+│   │   │   ├── TodayTab.jsx         Today's effective schedule (read-only + edit mode + split-exception warning)
+│   │   │   ├── DefaultTab.jsx       Default week schedule editor + Reset to Defaults
+│   │   │   ├── TemplatesTab.jsx     3 custom template slots + read-only built-in templates
+│   │   │   └── ExceptionsTab.jsx    Exception CRUD (dayOff / template / custom)
+│   │   │
+│   │   └── BellScheduleEditor.jsx   DEAD CODE — replaced by BellSetEditor.jsx
+│   │
+│   ├── Settings/
+│   │   ├── SettingsPage.jsx         General (workingDays, timezone, ringDurationSec), PIN,
+│   │   │                            user management, WiFi, time sync, system actions, system info
+│   │   └── SettingsSlice.js         settings slice — WiFi scan/save, PIN, system info, reboot,
+│   │                                factory reset, syncTime, testBell
+│   │
+│   ├── WiFiConfig/
+│   │   ├── WiFiConfigSlice.js       Initial WiFi setup wizard state
+│   │   └── components/
+│   │       └── WiFiConfigPage.jsx   Setup wizard (shown when no WiFi credentials on device)
+│   │
+│   ├── Calendar/                    DEAD CODE — removed from store and navigation in Phase 5
+│   │   ├── CalendarPage.jsx
+│   │   └── CalendarSlice.js
+│   │
+│   └── Home/
+│       └── HomePage.jsx             DEAD CODE — replaced by Dashboard + Schedule + Settings
+│
+├── hooks/
+│   ├── useLocale.jsx                t(key), lang, setLang — i18n lookup hook
+│   └── useTheme.js                  Dark/light theme toggle
+│
+├── i18n/
+│   ├── en.js                        English strings
+│   └── bg.js                        Bulgarian strings (default locale)
+│
+├── middleware/
+│   └── authMiddleware.js            Listens for auth-error DOM events → dispatches logoutUser
+│
+├── services/
+│   ├── AuthService.js               login(), logout(), validateToken()
+│   ├── CredentialService.js         getCredentials(), saveCredentials(), deleteCredentials()
+│   ├── ErrorHandlingService.js      User-facing error message formatting
+│   ├── ScheduleService.js           getSettings/saveSettings, getToday/saveToday,
+│   │                                getDefault/saveDefault, getTemplates/saveTemplates,
+│   │                                getExceptions/saveExceptions, getDefaults
 │   └── __tests__/
 │       └── AuthService.test.js
 │
-├── utils/                             # 🛠️ Utilities
-│   ├── HttpClient.js                 # HTTP client with auth
-│   ├── HttpRequestAgent.js           # Request wrapper
-│   ├── TokenManager.js               # Token storage
-│   ├── authUtils.js                  # Auth helpers
-│   ├── formValidation.js             # Form validation
+├── styles/
+│   └── app.css                      Global stylesheet — all component and page styles
+│
+├── types/
+│   └── auth.js                      JSDoc types: AuthState, UserInfo, LoginCredentials
+│
+├── utils/
+│   ├── HttpClient.js                Low-level fetch wrapper; fires auth-error events on 401/403
+│   ├── HttpRequestAgent.js          Singleton API client: get/post/put/delete + login/logout
+│   ├── TokenManager.js              Session-alive timestamp tracker (legacy; no token storage)
+│   ├── authUtils.js                 Auth helper functions
+│   ├── formValidation.js            Form input validation
 │   └── __tests__/
 │       └── integration.test.js
 │
-├── middleware/                        # ⚙️ Redux Middleware
-│   └── authMiddleware.js             # Auth event handling
-│
-├── config/                            # ⚙️ Configuration
-│   └── apiConfig.js                  # API endpoints & config
-│
-├── types/                             # 📝 Type Definitions
-│   └── auth.js                       # JSDoc type definitions
-│
-└── app/                               # 🏪 Redux Store
-    └── store.js                      # Store configuration
-```
-
-## 🔄 Data Flow
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                         App.jsx                              │
-│                            │                                 │
-│                            ▼                                 │
-│                      AuthGuard.jsx                           │
-│                            │                                 │
-│              ┌─────────────┴─────────────┐                  │
-│              ▼                           ▼                   │
-│         LoginPage.jsx              HomePage.jsx              │
-│              │                           │                   │
-└──────────────┼───────────────────────────┼──────────────────┘
-               │                           │
-               ▼                           ▼
-        ┌──────────────┐          ┌──────────────┐
-        │  AuthSlice   │          │  AppSlice    │
-        │  (auth)      │          │  (mode)      │
-        └──────┬───────┘          └──────┬───────┘
-               │                         │
-               └────────┬────────────────┘
-                        ▼
-                ┌───────────────┐
-                │  Redux Store  │
-                └───────┬───────┘
-                        │
-        ┌───────────────┼───────────────┐
-        ▼               ▼               ▼
-┌──────────────┐ ┌──────────────┐ ┌──────────────┐
-│ AuthService  │ │ HttpRequest  │ │ TokenManager │
-│              │ │   Agent      │ │              │
-└──────┬───────┘ └──────┬───────┘ └──────┬───────┘
-       │                │                │
-       └────────────────┼────────────────┘
-                        ▼
-                ┌──────────────┐
-                │  HttpClient  │
-                └──────┬───────┘
-                       │
-                       ▼
-                ┌──────────────┐
-                │  ESP32 API   │
-                └──────────────┘
-```
-
-## 🎯 Feature Responsibilities
-
-### Auth Feature
-**Purpose**: Handle all authentication logic
-- User login/logout
-- Token management
-- Session validation
-- Route protection
-- Login UI
-
-**Key Files**:
-- `AuthSlice.js` - Redux state for authentication
-- `LoginPage.jsx` - Login form component
-- `AuthGuard.jsx` - Route protection wrapper
-
-**Dependencies**:
-- Services: AuthService, ErrorHandlingService
-- Utils: HttpRequestAgent, TokenManager
-- External: Home feature (for routing)
-
----
-
-### Home Feature
-**Purpose**: Main application interface after authentication
-- Device control panel
-- Mode management
-- User information display
-- Logout functionality
-
-**Key Files**:
-- `HomePage.jsx` - Main home component
-- `HomePage.css` - Home page styling
-
-**Dependencies**:
-- Auth: `logoutUser` action
-- App: Mode control actions
-- Redux: Both `auth` and `mode` state
-
----
-
-### App Feature
-**Purpose**: Device mode control (existing functionality)
-- Mode value management
-- ESP32 communication
-- Connection status
-
-**Key Files**:
-- `App.jsx` - Main app wrapper (now uses AuthGuard)
-- `AppSlice.jsx` - Mode control state
-
-**Dependencies**:
-- Utils: HttpRequestAgent (for authenticated requests)
-- Auth: Requires authentication for API calls
-
----
-
-## 🔗 Integration Points
-
-### Auth → Home
-```javascript
-// AuthGuard.jsx
-import HomePage from '../../Home/HomePage.jsx';
-return isAuthenticated ? <HomePage /> : <LoginPage />;
-```
-
-### Home → Auth
-```javascript
-// HomePage.jsx
-import { logoutUser } from '../Auth/AuthSlice.js';
-const handleLogout = () => dispatch(logoutUser());
-```
-
-### Home → App
-```javascript
-// HomePage.jsx
-import { loadMode, updateMode } from '../App/AppSlice.jsx';
-dispatch(loadMode());
-dispatch(updateMode(value));
-```
-
-### All Features → Services
-```javascript
-// Any feature can use services
-import AuthService from '../../services/AuthService.js';
-import HttpRequestAgent from '../../utils/HttpRequestAgent.js';
+└── main.jsx                         Entry point — <Provider store> → <App>
 ```
 
 ---
 
-## 🚀 Benefits of This Structure
+## Redux State Shape
 
-1. **Separation of Concerns**: Auth logic is isolated from application logic
-2. **Reusability**: Home feature can be used independently
-3. **Maintainability**: Clear boundaries between features
-4. **Testability**: Each feature can be tested in isolation
-5. **Scalability**: Easy to add new features without affecting existing ones
+```js
+{
+  mode:      { value, loading, error },           // device mode
+  auth:      { user, authenticated, loading, error },
+  wifiConfig:{ /* WiFi setup wizard state */ },
+  dashboard: { bellState, panicMode, dayType, timeSynced, lastSyncAgeSec,
+               currentTime, currentDate, nextBell, loading, error },
+  schedule:  {
+    today:          { bells, dayType, source, multiDayException },
+    default:        { bells },
+    templates:      [null|{name,bells}, null|{...}, null|{...}],  // 3 custom slots
+    builtins:       [{name, bells}, ...],                          // read-only from server
+    exceptions:     [{ startDate, endDate, label, action, ... }, ...],
+    timezone:       '',
+    workingDays:    [1,2,3,4,5],
+    ringDurationSec: 3,
+    loading, saving, error, saveSuccess,
+  },
+  settings:  { systemInfo, wifiNetworks, syncing, testingBell, rebooting, resetting,
+               loading, saving, error, saveSuccess },
+}
+```
 
 ---
 
-## 📝 Adding New Features
+## Unified BellSet Model
 
-To add a new feature:
-
-1. Create folder in `src/features/YourFeature/`
-2. Add component files and styling
-3. Create Redux slice if needed (in feature folder)
-4. Add to store configuration in `src/app/store.js`
-5. Import and use in appropriate parent component
-6. Document in feature README.md
-
-Example:
+All schedule data uses the same shape:
+```js
+{ bells: [{ hour: 8, minute: 0, label: "Час 1 начало" }, ...] }
 ```
-src/features/Settings/
-├── SettingsPage.jsx              # Settings UI (schedule, PIN, credentials, WiFi, system)
-├── SettingsPage.css
-├── SettingsSlice.js              # Settings state (includes credential management thunks)
-└── README.md
+No `durationSec` per bell. Ring duration is a single global setting (`ringDurationSec`) in `ScheduleSlice`.
+
+---
+
+## Data Flow
+
+```
+AuthGuard (validates session on startup)
+    │
+    ├─ Not authenticated → LoginPage
+    └─ Authenticated ───→ Navigation + Page tabs
+                                 │
+                    ┌────────────┼───────────────┐
+                    ▼            ▼               ▼
+              DashboardPage  SchedulePage   SettingsPage
+                    │            │               │
+                    │      ┌─────┴─────┐         │
+                    │      ▼           │         │
+                    │  TodayTab        │         │
+                    │  DefaultTab      │         │
+                    │  TemplatesTab    │         │
+                    │  ExceptionsTab   │         │
+                    └────────────┴─────┴─────────┘
+                                 │
+                         Redux dispatch
+                                 │
+                    ┌────────────┴───────────┐
+                    ▼                        ▼
+              ScheduleService          SettingsSlice
+              (ScheduleSlice thunks)   thunks
+                    │
+                    ▼
+              HttpRequestAgent → ESP32 REST API
 ```
 
-Then integrate:
-```javascript
-// In HomePage.jsx or AuthGuard.jsx
-import SettingsPage from '../Settings/SettingsPage.jsx';
+---
+
+## API Endpoints Used
+
+| Service / Slice     | Endpoint                       | Method    |
+|---------------------|--------------------------------|-----------|
+| AuthService         | `/api/login`                   | POST      |
+| AuthService         | `/api/logout`                  | POST      |
+| AuthService         | `/api/validate-token`          | GET       |
+| ScheduleService     | `/api/schedule/settings`       | GET / POST|
+| ScheduleService     | `/api/schedule/today`          | GET / POST|
+| ScheduleService     | `/api/schedule/default`        | GET / POST|
+| ScheduleService     | `/api/schedule/templates`      | GET / POST|
+| ScheduleService     | `/api/schedule/exceptions`     | GET / POST|
+| ScheduleService     | `/api/schedule/defaults`       | GET       |
+| DashboardSlice      | `/api/bell/status`             | GET       |
+| DashboardSlice      | `/api/bell/panic`              | POST      |
+| SettingsSlice       | `/api/bell/test`               | POST      |
+| SettingsSlice       | `/api/wifi/scan`               | GET       |
+| SettingsSlice       | `/api/wifi/credentials`        | POST      |
+| SettingsSlice       | `/api/system/pin`              | POST      |
+| SettingsSlice       | `/api/system/info`             | GET       |
+| SettingsSlice       | `/api/system/reboot`           | POST      |
+| SettingsSlice       | `/api/system/factory-reset`    | POST      |
+| SettingsSlice       | `/api/system/sync-time`        | POST      |
+| CredentialService   | `/api/system/credentials`      | GET/POST/DELETE |
+| WiFiConfigSlice     | `/api/wifi/*`                  | various   |
+
+---
+
+## Build
+
+```bash
+npm run build       # Vite production build → dist/
 ```
+
+Output is then embedded into the ESP32 firmware's FatFS flash partition (`/react/`).

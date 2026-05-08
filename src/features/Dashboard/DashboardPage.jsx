@@ -15,12 +15,16 @@ export default function DashboardPage() {
   const dispatch = useDispatch();
   const { bellState, panicMode, dayType, timeSynced, lastSyncAgeSec, currentTime, currentDate, nextBell, error } =
     useSelector((s) => s.dashboard);
+  const ringDurationSec = useSelector((s) => s.schedule.ringDurationSec);
   const { t } = useLocale();
   const [confirmPanic, setConfirmPanic] = useState(false);
-  const [testDuration, setTestDuration] = useState(3);
+  const [testDuration, setTestDuration] = useState(ringDurationSec || 3);
   const [bellFeedback, setBellFeedback] = useState(null);
   const { testingBell } = useSelector((s) => s.settings);
   const intervalRef = useRef(null);
+
+  // Sync testDuration when global ringDurationSec is loaded from settings
+  useEffect(() => { if (ringDurationSec) setTestDuration(ringDurationSec); }, [ringDurationSec]);
 
   const refresh = useCallback(() => {
     dispatch(fetchBellStatus());

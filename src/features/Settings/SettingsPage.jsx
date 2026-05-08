@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import {
   fetchSettings, saveSettings,
-  setWorkingDays, setTimezone,
+  setWorkingDays, setTimezone, setRingDurationSec,
   clearError as clearScheduleError,
   clearSaveSuccess,
 } from '../Schedule/ScheduleSlice.js';
@@ -43,8 +43,8 @@ export default function SettingsPage() {
   const dispatch = useDispatch();
   const { t } = useLocale();
 
-  /* Schedule state (timezone + working days) */
-  const { timezone, workingDays, saving: savingSchedule, saveSuccess } =
+  /* Schedule state (timezone + working days + ring duration) */
+  const { timezone, workingDays, ringDurationSec, saving: savingSchedule, saveSuccess } =
     useSelector((s) => s.schedule);
   const scheduleError = useSelector((s) => s.schedule.error);
 
@@ -103,7 +103,7 @@ export default function SettingsPage() {
   };
 
   const handleSaveSettings = () => {
-    dispatch(saveSettings({ timezone, workingDays }));
+    dispatch(saveSettings({ timezone, workingDays, ringDurationSec }));
   };
 
   const handleScanWifi = () => {
@@ -258,6 +258,36 @@ export default function SettingsPage() {
               onChange={(tz) => dispatch(setTimezone(tz))}
             />
             <span className="field-hint">{t('settings.timezoneHint')}</span>
+          </div>
+        </div>
+
+        <div className="settings-section">
+          <h4>{t('settings.ringDuration')}</h4>
+          <p className="card-desc">{t('settings.ringDurationDesc')}</p>
+          <div className="settings-row">
+            <label className="form-label" htmlFor="ring-dur">{t('settings.ringDurationSec')}</label>
+            <div className="duration-picker">
+              <input
+                type="range"
+                className="duration-slider"
+                id="ring-dur"
+                min={1}
+                max={300}
+                value={ringDurationSec}
+                onChange={(e) => dispatch(setRingDurationSec(parseInt(e.target.value) || 1))}
+              />
+              <div className="duration-value-row">
+                <input
+                  type="number"
+                  className="duration-input"
+                  min={1}
+                  max={300}
+                  value={ringDurationSec}
+                  onChange={(e) => dispatch(setRingDurationSec(parseInt(e.target.value) || 1))}
+                />
+                <span className="duration-display">{ringDurationSec}s</span>
+              </div>
+            </div>
           </div>
         </div>
 

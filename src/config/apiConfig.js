@@ -26,8 +26,8 @@ export const API_CONFIG = {
 
     // Schedule endpoints
     SCHEDULE_SETTINGS: '/api/schedule/settings',
-    SCHEDULE_BELLS: '/api/schedule/bells',
-    SCHEDULE_HOLIDAYS: '/api/schedule/holidays',
+    SCHEDULE_DEFAULT: '/api/schedule/default',
+    SCHEDULE_TODAY: '/api/schedule/today',
     SCHEDULE_EXCEPTIONS: '/api/schedule/exceptions',
     SCHEDULE_TEMPLATES: '/api/schedule/templates',
     BELL_STATUS: '/api/bell/status',

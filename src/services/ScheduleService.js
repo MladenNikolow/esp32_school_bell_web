@@ -4,40 +4,40 @@ import { API_CONFIG } from '../config/apiConfig.js';
 const agent = HttpRequestAgent;
 
 const ScheduleService = {
-  // Settings
+  // Settings (includes timezone, workingDays, ringDurationSec)
   getSettings: (signal) =>
     agent.get(API_CONFIG.ENDPOINTS.SCHEDULE_SETTINGS, signal),
 
   saveSettings: (data, signal) =>
     agent.post(API_CONFIG.ENDPOINTS.SCHEDULE_SETTINGS, data, signal),
 
-  // Bells (two shifts)
-  getBells: (signal) =>
-    agent.get(API_CONFIG.ENDPOINTS.SCHEDULE_BELLS, signal),
+  // Default BellSet
+  getDefault: (signal) =>
+    agent.get(API_CONFIG.ENDPOINTS.SCHEDULE_DEFAULT, signal),
 
-  saveBells: (firstShift, secondShift, signal) =>
-    agent.post(API_CONFIG.ENDPOINTS.SCHEDULE_BELLS, { firstShift, secondShift }, signal),
+  saveDefault: (bells, signal) =>
+    agent.post(API_CONFIG.ENDPOINTS.SCHEDULE_DEFAULT, { bells }, signal),
 
-  // Holidays
-  getHolidays: (signal) =>
-    agent.get(API_CONFIG.ENDPOINTS.SCHEDULE_HOLIDAYS, signal),
+  // Today's effective schedule
+  getToday: (signal) =>
+    agent.get(API_CONFIG.ENDPOINTS.SCHEDULE_TODAY, signal),
 
-  saveHolidays: (holidays, signal) =>
-    agent.post(API_CONFIG.ENDPOINTS.SCHEDULE_HOLIDAYS, { holidays }, signal),
+  saveToday: (bells, signal) =>
+    agent.post(API_CONFIG.ENDPOINTS.SCHEDULE_TODAY, { bells }, signal),
 
   // Exceptions
   getExceptions: (signal) =>
     agent.get(API_CONFIG.ENDPOINTS.SCHEDULE_EXCEPTIONS, signal),
 
-  saveExceptions: (data, signal) =>
-    agent.post(API_CONFIG.ENDPOINTS.SCHEDULE_EXCEPTIONS, data, signal),
+  saveExceptions: (exceptions, signal) =>
+    agent.post(API_CONFIG.ENDPOINTS.SCHEDULE_EXCEPTIONS, { exceptions }, signal),
 
   // Templates
   getTemplates: (signal) =>
     agent.get(API_CONFIG.ENDPOINTS.SCHEDULE_TEMPLATES, signal),
 
-  saveTemplates: (data, signal) =>
-    agent.post(API_CONFIG.ENDPOINTS.SCHEDULE_TEMPLATES, data, signal),
+  saveTemplates: (templates, signal) =>
+    agent.post(API_CONFIG.ENDPOINTS.SCHEDULE_TEMPLATES, { templates }, signal),
 
   // Bell status & panic
   getBellStatus: (signal) =>

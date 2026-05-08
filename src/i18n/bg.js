@@ -1,8 +1,7 @@
 const bg = {
-  // Navigation
+  // Navigation (updated — no calendar tab)
   'nav.dashboard': 'Табло',
   'nav.schedule': 'Разписание',
-  'nav.calendar': 'Календар',
   'nav.settings': 'Настройки',
 
   // Auth / Login
@@ -90,6 +89,48 @@ const bg = {
   'clock.days.4': 'Четвъртък',
   'clock.days.5': 'Петък',
   'clock.days.6': 'Събота',
+
+  // Schedule sub-tabs
+  'schedule.subtab.today': 'Днес',
+  'schedule.subtab.default': 'По подразбиране',
+  'schedule.subtab.templates': 'Шаблони',
+  'schedule.subtab.exceptions': 'Изключения',
+
+  // Schedule — new unified model strings
+  'schedule.today': 'Разписание за днес',
+  'schedule.default': 'Разписание по подразбиране',
+  'schedule.templates': 'Шаблони за звънци',
+  'schedule.exceptions': 'Изключения',
+  'schedule.editToday': 'Редактирай днес',
+  'schedule.saveToday': 'Запази за днес',
+  'schedule.cancel': 'Отказ',
+  'schedule.applyTemplate': 'Приложи шаблон',
+  'schedule.bellsCount': 'звънеца',
+  'schedule.readOnly': 'Само за четене',
+  'schedule.builtinTemplates': 'Вградени шаблони',
+  'schedule.customTemplates': 'Персонализирани шаблони',
+  'schedule.multiDayExceptionNote': 'Многодневно изключение обхваща днес. При запазване изключението ще бъде разделено, за да се промени само днес.',
+
+  // Day types (updated)
+  'dayType.off': 'Почивен ден',
+  'dayType.working': 'Работен ден',
+  'dayType.exceptionDayOff': 'Изключение — почивен ден',
+  'dayType.exceptionTemplate': 'Изключение — шаблон',
+  'dayType.exceptionCustom': 'Изключение — персонализирано',
+
+  // Exceptions (updated actions)
+  'calendar.action_dayOff': 'Почивен ден',
+  'calendar.action_dayOff_desc': 'Звънците няма да звънят на тази дата.',
+  'calendar.action_template': 'По шаблон',
+  'calendar.action_template_desc': 'Звънците ще звънят по запазен шаблон.',
+  'calendar.action_custom': 'Персонализирано',
+  'calendar.action_custom_desc': 'Дефинирайте персонализирано разписание за този период.',
+  'calendar.editException': 'Редактирай изключение',
+
+  // Settings — ring duration
+  'settings.ringDuration': 'Продължителност на звънене',
+  'settings.ringDurationDesc': 'Колко секунди релето е активно при всяко насрочено звънене. Важи глобално за всички звънци.',
+  'settings.ringDurationSec': 'Продължителност (1–300 с)',
 
   // Schedule
   'schedule.bellTimetable': 'Седмично разписание',

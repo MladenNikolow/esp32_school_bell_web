@@ -1,8 +1,7 @@
 const en = {
-  // Navigation
+  // Navigation (updated — no calendar tab)
   'nav.dashboard': 'Dashboard',
   'nav.schedule': 'Schedule',
-  'nav.calendar': 'Calendar',
   'nav.settings': 'Settings',
 
   // Auth / Login
@@ -90,6 +89,48 @@ const en = {
   'clock.days.4': 'Thursday',
   'clock.days.5': 'Friday',
   'clock.days.6': 'Saturday',
+
+  // Schedule sub-tabs
+  'schedule.subtab.today': 'Today',
+  'schedule.subtab.default': 'Default',
+  'schedule.subtab.templates': 'Templates',
+  'schedule.subtab.exceptions': 'Exceptions',
+
+  // Schedule — new unified model strings
+  'schedule.today': "Today's Schedule",
+  'schedule.default': 'Default Schedule',
+  'schedule.templates': 'Bell Templates',
+  'schedule.exceptions': 'Exceptions',
+  'schedule.editToday': 'Edit Today',
+  'schedule.saveToday': 'Save Today',
+  'schedule.cancel': 'Cancel',
+  'schedule.applyTemplate': 'Apply Template',
+  'schedule.bellsCount': 'bells',
+  'schedule.readOnly': 'Read-only',
+  'schedule.builtinTemplates': 'Built-in Templates',
+  'schedule.customTemplates': 'Custom Templates',
+  'schedule.multiDayExceptionNote': 'A multi-day exception covers today. Saving will split the exception so only today is modified.',
+
+  // Day types (updated)
+  'dayType.off': 'Weekend / Day Off',
+  'dayType.working': 'Working Day',
+  'dayType.exceptionDayOff': 'Exception — Day Off',
+  'dayType.exceptionTemplate': 'Exception — Template',
+  'dayType.exceptionCustom': 'Exception — Custom',
+
+  // Exceptions (updated actions)
+  'calendar.action_dayOff': 'Day Off',
+  'calendar.action_dayOff_desc': 'No bells will ring on this date.',
+  'calendar.action_template': 'From Template',
+  'calendar.action_template_desc': 'Bells will ring according to a saved template.',
+  'calendar.action_custom': 'Custom Schedule',
+  'calendar.action_custom_desc': 'Define a custom bell schedule for this date range.',
+  'calendar.editException': 'Edit Exception',
+
+  // Settings — ring duration
+  'settings.ringDuration': 'Bell Ring Duration',
+  'settings.ringDurationDesc': 'How long the bell relay stays active for every scheduled ring. Applies to all bells globally.',
+  'settings.ringDurationSec': 'Duration (1–300 s)',
 
   // Schedule
   'schedule.bellTimetable': 'Bell Timetable',

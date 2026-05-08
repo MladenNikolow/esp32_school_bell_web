@@ -6,7 +6,6 @@ import LoginPage from './LoginPage.jsx';
 import Navigation from '../../Navigation/Navigation.jsx';
 import DashboardPage from '../../Dashboard/DashboardPage.jsx';
 import SchedulePage from '../../Schedule/SchedulePage.jsx';
-import CalendarPage from '../../Calendar/CalendarPage.jsx';
 import SettingsPage from '../../Settings/SettingsPage.jsx';
 import RingyLogo from '../../../components/RingyLogo.jsx';
 import useTheme from '../../../hooks/useTheme.js';
@@ -15,7 +14,6 @@ import useLocale from '../../../hooks/useLocale.jsx';
 const PAGES = {
   dashboard: DashboardPage,
   schedule: SchedulePage,
-  calendar: CalendarPage,
   settings: SettingsPage,
 };
 
