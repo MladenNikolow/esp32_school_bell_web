@@ -35,7 +35,10 @@ export default function TodayTab() {
   const cancelEdit = () => setEditing(false);
 
   const handleSave = () => {
-    dispatch(saveToday(localBells));
+    dispatch(saveToday({ action: 'custom', customBells: { bells: localBells } }))
+      .unwrap()
+      .then(() => dispatch(fetchToday()))
+      .catch(() => {});
   };
 
   const dayTypeLabelKey = today.dayType ? `dayType.${today.dayType}` : null;

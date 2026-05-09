@@ -39,7 +39,7 @@ const initialState = {
 export const fetchSettings = createAsyncThunk('schedule/fetchSettings', async (_, { signal }) => ScheduleService.getSettings(signal));
 export const saveSettings  = createAsyncThunk('schedule/saveSettings',  async (payload, { signal }) => ScheduleService.saveSettings(payload, signal));
 export const fetchToday    = createAsyncThunk('schedule/fetchToday',    async (_, { signal }) => ScheduleService.getToday(signal));
-export const saveToday     = createAsyncThunk('schedule/saveToday',     async (bells, { signal }) => ScheduleService.saveToday(bells, signal));
+export const saveToday     = createAsyncThunk('schedule/saveToday',     async (payload, { signal }) => ScheduleService.saveToday(payload, signal));
 export const fetchDefault  = createAsyncThunk('schedule/fetchDefault',  async (_, { signal }) => ScheduleService.getDefault(signal));
 export const saveDefault   = createAsyncThunk('schedule/saveDefault',   async (bells, { signal }) => ScheduleService.saveDefault(bells, signal));
 export const fetchTemplates= createAsyncThunk('schedule/fetchTemplates',async (_, { signal }) => ScheduleService.getTemplates(signal));
@@ -97,7 +97,14 @@ const scheduleSlice = createSlice({
       s.today.source           = p?.source ?? null;
       s.today.multiDayException= p?.multiDayException ?? false;
     });
-    apSave(builder, saveToday, (s, p) => { if (p?.bells) s.today.bells = sortBells(p.bells); });
+    apSave(builder, saveToday, (s, p) => {
+      if (p?.bells) {
+        s.today.bells            = sortBells(p.bells);
+        s.today.dayType          = p.dayType ?? s.today.dayType;
+        s.today.source           = p.source ?? s.today.source;
+        s.today.multiDayException= p.multiDayException ?? false;
+      }
+    });
     ap(builder, fetchDefault, null, (s, p) => { s.default.bells = sortBells(p?.bells ?? []); });
     apSave(builder, saveDefault, (s, p) => { if (p?.bells) s.default.bells = sortBells(p.bells); });
     ap(builder, fetchTemplates, null, (s, p) => {

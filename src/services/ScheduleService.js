@@ -22,8 +22,8 @@ const ScheduleService = {
   getToday: (signal) =>
     agent.get(API_CONFIG.ENDPOINTS.SCHEDULE_TODAY, signal),
 
-  saveToday: (bells, signal) =>
-    agent.post(API_CONFIG.ENDPOINTS.SCHEDULE_TODAY, { bells }, signal),
+  saveToday: (payload, signal) =>
+    agent.post(API_CONFIG.ENDPOINTS.SCHEDULE_TODAY, payload, signal),
 
   // Exceptions
   getExceptions: (signal) =>
