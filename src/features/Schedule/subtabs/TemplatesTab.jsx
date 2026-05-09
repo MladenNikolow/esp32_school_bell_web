@@ -15,17 +15,17 @@ export default function TemplatesTab() {
   const { templates: storeTemplates, builtins, loading, saving, error, saveSuccess } =
     useSelector((s) => s.schedule);
 
-  // Local editable copies of 3 custom slots
   const [local, setLocal] = useState([null, null, null]);
+  const [open, setOpen] = useState([false, false, false]);
 
   useEffect(() => {
     dispatch(fetchTemplates());
   }, [dispatch]);
 
   useEffect(() => {
-    // Sync from store
     const arr = Array.from({ length: SLOT_COUNT }, (_, i) => storeTemplates[i] ?? null);
     setLocal(arr);
+    // preserve open state across re-fetches
   }, [storeTemplates]);
 
   useEffect(() => {
@@ -35,15 +35,25 @@ export default function TemplatesTab() {
     }
   }, [saveSuccess, dispatch]);
 
-  const updateSlot = (idx, patch) =>
-    setLocal((prev) => prev.map((s, i) => i === idx ? { ...(s || { name: '', bells: [] }), ...patch } : s));
+  const toggleOpen = (idx) =>
+    setOpen((prev) => prev.map((v, i) => (i === idx ? !v : v)));
+
+  const setAllOpen = (val) => setOpen([val, val, val]);
+
+  const updateSlot = (idx, patch) => {
+    setLocal((prev) =>
+      prev.map((s, i) => (i === idx ? { ...(s || { name: '', bells: [] }), ...patch } : s))
+    );
+    // Auto-expand if this slot was null (first activation)
+    setOpen((prev) => prev.map((v, i) => (i === idx ? true : v)));
+  };
 
   const clearSlot = (idx) =>
     setLocal((prev) => prev.map((s, i) => (i === idx ? null : s)));
 
-  const handleSave = () => {
-    dispatch(saveTemplates(local));
-  };
+  const handleSave = () => dispatch(saveTemplates(local));
+
+  const allOpen = open.every(Boolean);
 
   return (
     <div className="schedule-tab-pane">
@@ -83,46 +93,64 @@ export default function TemplatesTab() {
                     <span className="template-slot-name">{b.name}</span>
                     <span className="template-readonly-badge">{t('schedule.readOnly')}</span>
                   </div>
-                  <BellSetEditor
-                    value={{ bells: b.bells || [] }}
-                    onChange={() => {}}
-                    readOnly
-                  />
+                  <BellSetEditor value={{ bells: b.bells || [] }} onChange={() => {}} readOnly />
                 </div>
               ))}
             </section>
           )}
 
-          {/* 3 editable custom slots */}
+          {/* 3 editable custom slots — collapsible */}
           <section className="template-section">
-            <h3 className="template-section-title">{t('schedule.customTemplates')}</h3>
+            <div className="section-header-row">
+              <h3 className="template-section-title">{t('schedule.customTemplates')}</h3>
+              <button type="button" className="bulk-toggle" onClick={() => setAllOpen(!allOpen)}>
+                {allOpen ? t('schedule.collapseAll') : t('schedule.expandAll')}
+              </button>
+            </div>
+
             {Array.from({ length: SLOT_COUNT }, (_, idx) => {
               const slot = local[idx];
+              const isOpen = open[idx];
+              const bellCount = slot?.bells?.length ?? 0;
               return (
-                <div key={idx} className="template-slot">
-                  <div className="template-slot-header">
+                <div key={idx} className={`collapsible-card${isOpen ? ' open' : ''}`}>
+                  <div
+                    className="collapsible-card-header"
+                    onClick={() => toggleOpen(idx)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && toggleOpen(idx)}
+                    aria-expanded={isOpen}
+                  >
+                    <span className="cc-chevron">{isOpen ? '▼' : '▶'}</span>
+                    <span className="cc-slot-index">{idx + 1}</span>
                     <input
-                      className="template-name-input"
+                      className="template-name-input cc-name-input"
                       value={slot?.name || ''}
                       placeholder={t('calendar.templateSlot', { n: idx + 1 })}
                       onChange={(e) => updateSlot(idx, { name: e.target.value })}
+                      onClick={(e) => e.stopPropagation()}
+                      onFocus={(e) => { e.stopPropagation(); if (!isOpen) toggleOpen(idx); }}
                     />
+                    <span className="cc-summary">{bellCount} {t('schedule.bellsCount')}</span>
                     {slot && (
                       <button
                         type="button"
                         className="delete-btn"
                         title={t('calendar.deleteTemplate')}
-                        onClick={() => clearSlot(idx)}
+                        onClick={(e) => { e.stopPropagation(); clearSlot(idx); }}
                       >×</button>
                     )}
                   </div>
-                  <BellSetEditor
-                    value={{ bells: slot?.bells || [] }}
-                    onChange={({ bells }) => updateSlot(idx, { bells })}
-                    allowApplyTemplate
-                    templates={local}
-                    builtins={builtins}
-                  />
+                  <div className="collapsible-card-body">
+                    <BellSetEditor
+                      value={{ bells: slot?.bells || [] }}
+                      onChange={({ bells }) => updateSlot(idx, { bells })}
+                      allowApplyTemplate
+                      templates={local}
+                      builtins={builtins}
+                    />
+                  </div>
                 </div>
               );
             })}

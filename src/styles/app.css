@@ -3639,6 +3639,105 @@ body {
 }
 .edit-btn:hover { background: #e3f2fd; transform: translateY(-1px); }
 
+/* ── Collapsible cards (Templates + Exceptions) ─────────────────── */
+.section-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.section-header-row .template-section-title { margin-bottom: 0; }
+.bulk-toggle-group { margin-bottom: 10px; text-align: right; }
+.bulk-toggle {
+  font-size: 12px;
+  color: #1976d2;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.bulk-toggle:hover { color: #0d47a1; }
+
+.collapsible-card {
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  margin-bottom: 10px;
+  background: #fff;
+  overflow: hidden;
+  transition: box-shadow 0.15s;
+}
+.collapsible-card:hover { box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); }
+.collapsible-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 14px;
+  cursor: pointer;
+  user-select: none;
+  background: #f9fafb;
+  border-bottom: 1px solid transparent;
+  transition: background 0.12s;
+  min-height: 44px;
+}
+.collapsible-card.open .collapsible-card-header {
+  border-bottom-color: #e0e0e0;
+  background: #f3f6fa;
+}
+.collapsible-card-header:hover { background: #eef2f7; }
+.cc-chevron {
+  font-size: 9px;
+  color: #757575;
+  flex-shrink: 0;
+  width: 12px;
+  text-align: center;
+}
+.cc-slot-index {
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  background: #1976d2;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.cc-name-input { flex: 1; min-width: 0; margin-bottom: 0; }
+.cc-summary {
+  font-size: 12px;
+  color: #757575;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.cc-dates {
+  font-family: 'SF Mono', 'Consolas', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  color: #1a1a1a;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.cc-exc-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a1a1a;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.collapsible-card-body {
+  display: none;
+  padding: 16px;
+}
+.collapsible-card.open .collapsible-card-body { display: block; }
+
 /* Exception editor */
 .exception-editor {
   border: 1px solid #e0e0e0;
@@ -3720,6 +3819,10 @@ body {
   .tab-header { flex-direction: column; align-items: stretch; }
   .exception-entry { flex-direction: column; }
   .template-slot-header { flex-direction: column; align-items: stretch; }
+  .collapsible-card-header { flex-wrap: wrap; }
+  .cc-name-input { width: 100%; }
+  .cc-dates { font-size: 11px; }
+  .section-header-row { flex-direction: column; align-items: flex-start; gap: 6px; }
 }
 
 /* ─── Dark mode — Phase 5 (aligned with app dark palette) ─── */
@@ -3774,6 +3877,19 @@ body {
 [data-theme="dark"] .empty-text { color: #757575; }
 [data-theme="dark"] .info-banner { background: #1a3a5c; border-left-color: #42a5f5; color: #90caf9; }
 [data-theme="dark"] .warning-banner { background: #3e2c00; border-left-color: #f9a825; color: #ffe082; }
+
+/* Collapsible cards — dark mode */
+[data-theme="dark"] .collapsible-card { background: #2a2a2a; border-color: #3a3a3a; }
+[data-theme="dark"] .collapsible-card:hover { box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4); }
+[data-theme="dark"] .collapsible-card-header { background: #323232; }
+[data-theme="dark"] .collapsible-card.open .collapsible-card-header { background: #2e3a4a; border-bottom-color: #3a3a3a; }
+[data-theme="dark"] .collapsible-card-header:hover { background: #3a3a3a; }
+[data-theme="dark"] .cc-chevron { color: #9e9e9e; }
+[data-theme="dark"] .cc-dates { color: #e0e0e0; }
+[data-theme="dark"] .cc-exc-label { color: #e0e0e0; }
+[data-theme="dark"] .cc-summary { color: #9e9e9e; }
+[data-theme="dark"] .bulk-toggle { color: #90caf9; }
+[data-theme="dark"] .bulk-toggle:hover { color: #bbdefb; }
 [data-theme="dark"] .day-type-badge                           { background: #1a3a5c; color: #90caf9; }
 [data-theme="dark"] .day-type-badge.day-type-working          { background: #1b5e20; color: #a5d6a7; }
 [data-theme="dark"] .day-type-badge.day-type-off,

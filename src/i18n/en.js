@@ -155,6 +155,8 @@ const en = {
   'schedule.addBell': '+ Add Bell',
   'schedule.noBells': 'No bells configured. Add a bell to get started.',
   'schedule.saveBells': 'Save Bells',
+  'schedule.expandAll': 'Expand all',
+  'schedule.collapseAll': 'Collapse all',
   'schedule.saving': 'Saving...',
   'schedule.savedSuccess': 'Saved successfully',
   'schedule.loading': 'Loading schedule...',

@@ -32,8 +32,7 @@ export default function ExceptionsTab() {
     useSelector((s) => s.schedule);
 
   const [localExceptions, setLocalExceptions] = useState([]);
-  const [editingIdx, setEditingIdx] = useState(null); // null = not editing, -1 = new
-  const [draft, setDraft] = useState(null);
+  const [open, setOpen] = useState([]);
 
   useEffect(() => {
     dispatch(fetchExceptions());
@@ -41,6 +40,7 @@ export default function ExceptionsTab() {
 
   useEffect(() => {
     setLocalExceptions([...(exceptions || [])]);
+    setOpen(new Array(exceptions?.length ?? 0).fill(false));
   }, [exceptions]);
 
   useEffect(() => {
@@ -50,41 +50,31 @@ export default function ExceptionsTab() {
     }
   }, [saveSuccess, dispatch]);
 
-  const startNew = () => {
-    setDraft(emptyException());
-    setEditingIdx(-1);
+  const toggleOpen = (idx) =>
+    setOpen((prev) => prev.map((v, i) => (i === idx ? !v : v)));
+
+  const setAllOpen = (val) =>
+    setOpen(new Array(localExceptions.length).fill(val));
+
+  const addException = () => {
+    setLocalExceptions((prev) => [...prev, emptyException()]);
+    setOpen((prev) => [...prev, true]);
   };
 
-  const startEdit = (idx) => {
-    setDraft({ ...localExceptions[idx] });
-    setEditingIdx(idx);
-  };
-
-  const cancelEdit = () => {
-    setEditingIdx(null);
-    setDraft(null);
-  };
-
-  const commitDraft = () => {
-    let updated;
-    if (editingIdx === -1) {
-      updated = [...localExceptions, draft];
-    } else {
-      updated = localExceptions.map((ex, i) => (i === editingIdx ? draft : ex));
-    }
-    setLocalExceptions(updated);
-    setEditingIdx(null);
-    setDraft(null);
-    dispatch(saveExceptions(updated));
-  };
+  const patchException = (idx, patch) =>
+    setLocalExceptions((prev) => prev.map((ex, i) => (i === idx ? { ...ex, ...patch } : ex)));
 
   const deleteException = (idx) => {
     const updated = localExceptions.filter((_, i) => i !== idx);
+    const newOpen = open.filter((_, i) => i !== idx);
     setLocalExceptions(updated);
+    setOpen(newOpen);
     dispatch(saveExceptions(updated));
   };
 
-  const patchDraft = (patch) => setDraft((d) => ({ ...d, ...patch }));
+  const handleSave = () => dispatch(saveExceptions(localExceptions));
+
+  const actionLabel = (action) => t(`calendar.action_${action}`) || action;
 
   const templateOptions = templates
     .map((tpl, i) => tpl
@@ -92,15 +82,27 @@ export default function ExceptionsTab() {
       : null
     ).filter(Boolean);
 
-  const actionLabel = (action) => t(`calendar.action_${action}`) || action;
+  const allOpen = open.length > 0 && open.every(Boolean);
 
   return (
     <div className="schedule-tab-pane">
       <div className="tab-header">
         <h2>{t('schedule.exceptions')}</h2>
-        {editingIdx === null && (
-          <button className="save-button" onClick={startNew}>{t('calendar.addException')}</button>
-        )}
+        <div className="tab-header-actions">
+          <button type="button" className="save-button" onClick={addException}>
+            {t('calendar.addException')}
+          </button>
+          {localExceptions.length > 0 && (
+            <button
+              type="button"
+              className={`save-button${saving ? ' loading' : ''}`}
+              onClick={handleSave}
+              disabled={saving}
+            >
+              {saving ? t('schedule.saving') : t('calendar.saveExceptions')}
+            </button>
+          )}
+        </div>
       </div>
 
       {error && (
@@ -110,181 +112,176 @@ export default function ExceptionsTab() {
         </div>
       )}
 
-      {saveSuccess && editingIdx === null && (
+      {saveSuccess && (
         <div className="success-message">{t('schedule.savedSuccess')}</div>
       )}
 
       {loading ? (
         <p className="loading-text">{t('schedule.loading')}</p>
-      ) : editingIdx !== null && draft ? (
-        /* ── Exception editor ─────────────────────────────────── */
-        <div className="exception-editor">
-          <h3 className="exception-editor-title">
-            {editingIdx === -1 ? t('calendar.addException') : t('calendar.editException')}
-          </h3>
-
-          <div className="form-group">
-            <label className="form-label" htmlFor="ex-startDate">{t('calendar.startDate')}</label>
-            <input
-              id="ex-startDate"
-              type="date"
-              className="form-input"
-              value={draft.startDate}
-              onChange={(e) => patchDraft({ startDate: e.target.value })}
-            />
-          </div>
-          <div className="form-group">
-            <label className="form-label" htmlFor="ex-endDate">{t('calendar.endDate')}</label>
-            <input
-              id="ex-endDate"
-              type="date"
-              className="form-input"
-              value={draft.endDate}
-              onChange={(e) => patchDraft({ endDate: e.target.value })}
-            />
-          </div>
-          <div className="form-group">
-            <label className="form-label" htmlFor="ex-label">{t('calendar.label')}</label>
-            <input
-              id="ex-label"
-              type="text"
-              className="form-input"
-              value={draft.label}
-              onChange={(e) => patchDraft({ label: e.target.value })}
-              placeholder={t('calendar.exHolPlaceholder')}
-              maxLength={63}
-            />
-          </div>
-          <div className="form-group">
-            <label className="form-label" htmlFor="ex-action">{t('calendar.action')}</label>
-            <select
-              id="ex-action"
-              className="form-select"
-              value={draft.action}
-              onChange={(e) => patchDraft({ action: e.target.value })}
-            >
-              {ACTIONS.map((a) => (
-                <option key={a} value={a}>{actionLabel(a)}</option>
-              ))}
-            </select>
-          </div>
-
-          {draft.action === 'template' && (
-            <>
-              <div className="form-group">
-                <label className="form-label" htmlFor="ex-tpl">{t('calendar.selectTemplate')}</label>
-                <select
-                  id="ex-tpl"
-                  className="form-select"
-                  value={draft.templateIdx}
-                  onChange={(e) => patchDraft({ templateIdx: parseInt(e.target.value, 10) })}
-                >
-                  {templateOptions.length > 0
-                    ? templateOptions.map((o) => (
-                      <option key={o.idx} value={o.idx}>{o.label}</option>
-                    ))
-                    : <option disabled>{t('calendar.noTemplates')}</option>
-                  }
-                </select>
-              </div>
-              <div className="form-group">
-                <label className="form-label" htmlFor="ex-offset">{t('calendar.timeOffset')}</label>
-                <div className="form-row">
-                  <input
-                    id="ex-offset"
-                    type="number"
-                    className="duration-input"
-                    min={-240}
-                    max={240}
-                    value={draft.timeOffsetMin}
-                    onChange={(e) => patchDraft({ timeOffsetMin: parseInt(e.target.value, 10) || 0 })}
-                  />
-                  <span className="form-unit">{t('calendar.min')}</span>
-                </div>
-              </div>
-            </>
-          )}
-
-          {draft.action === 'custom' && (
-            <>
-              <div className="form-group">
-                <label className="form-label" htmlFor="ex-offset">{t('calendar.timeOffset')}</label>
-                <div className="form-row">
-                  <input
-                    id="ex-offset"
-                    type="number"
-                    className="duration-input"
-                    min={-240}
-                    max={240}
-                    value={draft.timeOffsetMin}
-                    onChange={(e) => patchDraft({ timeOffsetMin: parseInt(e.target.value, 10) || 0 })}
-                  />
-                  <span className="form-unit">{t('calendar.min')}</span>
-                </div>
-              </div>
-              <div className="form-group">
-                <label className="form-label">{t('calendar.customBells', { count: draft.customBells?.bells?.length ?? 0 })}</label>
-                <BellSetEditor
-                  value={draft.customBells || { bells: [] }}
-                  onChange={(bellSet) => patchDraft({ customBells: bellSet })}
-                  allowApplyTemplate
-                  templates={templates}
-                  builtins={builtins}
-                />
-              </div>
-            </>
-          )}
-
-          <div className="action-bar">
-            <button className="cancel-button" onClick={cancelEdit}>{t('schedule.cancel')}</button>
-            <button
-              className={`save-button${saving ? ' loading' : ''}`}
-              onClick={commitDraft}
-              disabled={saving}
-            >
-              {saving ? t('schedule.saving') : t('calendar.saveExceptions')}
-            </button>
-          </div>
-        </div>
       ) : (
-        /* ── Exceptions list ──────────────────────────────────── */
         <>
           {localExceptions.length === 0 ? (
             <p className="empty-text">{t('calendar.noExceptions')}</p>
           ) : (
-            <div className="exceptions-list">
-              {localExceptions.map((ex, i) => (
-                <div key={i} className="exception-entry">
-                  <div className="exception-dates">
-                    <span className="exception-date">{ex.startDate}</span>
-                    {ex.endDate && ex.endDate !== ex.startDate && (
-                      <> → <span className="exception-date">{ex.endDate}</span></>
-                    )}
-                  </div>
-                  <div className="exception-info">
-                    {ex.label && <span className="exception-label">{ex.label}</span>}
-                    <span className={`exception-action exception-action-${ex.action}`}>
-                      {actionLabel(ex.action)}
-                      {ex.action === 'template' && ex.templateIdx !== undefined && (
-                        <> — {templates[ex.templateIdx]?.name || t('calendar.templateSlot', { n: ex.templateIdx + 1 })}</>
-                      )}
-                      {ex.action === 'custom' && (
-                        <> ({ex.customBells?.bells?.length ?? 0} {t('schedule.bellsCount')})</>
-                      )}
-                    </span>
-                    {ex.timeOffsetMin !== 0 && (
-                      <span className="exception-offset">
-                        {t('calendar.timeOffset')} {ex.timeOffsetMin > 0 ? '+' : ''}{ex.timeOffsetMin} {t('calendar.min')}
+            <>
+              <div className="bulk-toggle-group">
+                <button type="button" className="bulk-toggle" onClick={() => setAllOpen(!allOpen)}>
+                  {allOpen ? t('schedule.collapseAll') : t('schedule.expandAll')}
+                </button>
+              </div>
+
+              <div className="exceptions-list">
+                {localExceptions.map((ex, i) => (
+                  <div key={i} className={`collapsible-card${open[i] ? ' open' : ''}`}>
+                    {/* Header — always visible */}
+                    <div
+                      className="collapsible-card-header"
+                      onClick={() => toggleOpen(i)}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && toggleOpen(i)}
+                      aria-expanded={open[i]}
+                    >
+                      <span className="cc-chevron">{open[i] ? '▼' : '▶'}</span>
+                      <span className="cc-dates">
+                        {ex.startDate}
+                        {ex.endDate && ex.endDate !== ex.startDate && <> → {ex.endDate}</>}
                       </span>
-                    )}
+                      {ex.label && <span className="cc-exc-label">{ex.label}</span>}
+                      <span className={`exception-action exception-action-${ex.action}`}>
+                        {actionLabel(ex.action)}
+                      </span>
+                      {ex.action === 'custom' && (
+                        <span className="cc-summary">
+                          {ex.customBells?.bells?.length ?? 0} {t('schedule.bellsCount')}
+                        </span>
+                      )}
+                      {ex.action === 'template' && ex.templateIdx !== undefined && (
+                        <span className="cc-summary">
+                          {templates[ex.templateIdx]?.name || t('calendar.templateSlot', { n: (ex.templateIdx ?? 0) + 1 })}
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        className="delete-btn"
+                        onClick={(e) => { e.stopPropagation(); deleteException(i); }}
+                        title={t('calendar.removeException')}
+                      >×</button>
+                    </div>
+
+                    {/* Body — shown when open */}
+                    <div className="collapsible-card-body">
+                      <div className="form-group">
+                        <label className="form-label">{t('calendar.startDate')}</label>
+                        <input
+                          type="date"
+                          className="form-input"
+                          value={ex.startDate}
+                          onChange={(e) => patchException(i, { startDate: e.target.value })}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">{t('calendar.endDate')}</label>
+                        <input
+                          type="date"
+                          className="form-input"
+                          value={ex.endDate}
+                          onChange={(e) => patchException(i, { endDate: e.target.value })}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">{t('calendar.label')}</label>
+                        <input
+                          type="text"
+                          className="form-input"
+                          value={ex.label}
+                          onChange={(e) => patchException(i, { label: e.target.value })}
+                          placeholder={t('calendar.exHolPlaceholder')}
+                          maxLength={63}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">{t('calendar.action')}</label>
+                        <select
+                          className="form-select"
+                          value={ex.action}
+                          onChange={(e) => patchException(i, { action: e.target.value })}
+                        >
+                          {ACTIONS.map((a) => (
+                            <option key={a} value={a}>{actionLabel(a)}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {ex.action === 'template' && (
+                        <>
+                          <div className="form-group">
+                            <label className="form-label">{t('calendar.selectTemplate')}</label>
+                            <select
+                              className="form-select"
+                              value={ex.templateIdx ?? 0}
+                              onChange={(e) => patchException(i, { templateIdx: parseInt(e.target.value, 10) })}
+                            >
+                              {templateOptions.length > 0
+                                ? templateOptions.map((o) => (
+                                  <option key={o.idx} value={o.idx}>{o.label}</option>
+                                ))
+                                : <option disabled>{t('calendar.noTemplates')}</option>
+                              }
+                            </select>
+                          </div>
+                          <div className="form-group">
+                            <label className="form-label">{t('calendar.timeOffset')}</label>
+                            <div className="form-row">
+                              <input
+                                type="number"
+                                className="duration-input"
+                                min={-240}
+                                max={240}
+                                value={ex.timeOffsetMin}
+                                onChange={(e) => patchException(i, { timeOffsetMin: parseInt(e.target.value, 10) || 0 })}
+                              />
+                              <span className="form-unit">{t('calendar.min')}</span>
+                            </div>
+                          </div>
+                        </>
+                      )}
+
+                      {ex.action === 'custom' && (
+                        <>
+                          <div className="form-group">
+                            <label className="form-label">{t('calendar.timeOffset')}</label>
+                            <div className="form-row">
+                              <input
+                                type="number"
+                                className="duration-input"
+                                min={-240}
+                                max={240}
+                                value={ex.timeOffsetMin}
+                                onChange={(e) => patchException(i, { timeOffsetMin: parseInt(e.target.value, 10) || 0 })}
+                              />
+                              <span className="form-unit">{t('calendar.min')}</span>
+                            </div>
+                          </div>
+                          <div className="form-group">
+                            <label className="form-label">
+                              {t('calendar.customBells', { count: ex.customBells?.bells?.length ?? 0 })}
+                            </label>
+                            <BellSetEditor
+                              value={ex.customBells || { bells: [] }}
+                              onChange={(bellSet) => patchException(i, { customBells: bellSet })}
+                              allowApplyTemplate
+                              templates={templates}
+                              builtins={builtins}
+                            />
+                          </div>
+                        </>
+                      )}
+                    </div>
                   </div>
-                  <div className="exception-actions">
-                    <button className="edit-btn" onClick={() => startEdit(i)}>{t('calendar.editTemplate')}</button>
-                    <button className="delete-btn" onClick={() => deleteException(i)} title={t('calendar.removeException')}>×</button>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            </>
           )}
           <p className="hint-text">{t('calendar.expiredNote')}</p>
         </>

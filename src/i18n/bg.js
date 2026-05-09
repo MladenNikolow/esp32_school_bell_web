@@ -155,6 +155,8 @@ const bg = {
   'schedule.addBell': '+ Добави звънец',
   'schedule.noBells': 'Няма конфигурирани звънци. Добавете звънец за начало.',
   'schedule.saveBells': 'Запази звънците',
+  'schedule.expandAll': 'Разгъни всички',
+  'schedule.collapseAll': 'Свий всички',
   'schedule.saving': 'Запазване...',
   'schedule.savedSuccess': 'Успешно запазено',
   'schedule.loading': 'Зареждане на разписание...',
