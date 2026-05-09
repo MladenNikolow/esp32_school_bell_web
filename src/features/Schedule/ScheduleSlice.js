@@ -4,6 +4,11 @@ import ScheduleService from '../../services/ScheduleService.js';
 const sortBells = (bells) =>
   [...bells].sort((a, b) => (a.hour * 60 + a.minute) - (b.hour * 60 + b.minute));
 
+let _idSeq = 0;
+const assignIds = (bells) => (bells || []).map((b) => ({ ...b, _id: `s-${++_idSeq}` }));
+const stripIds  = (bells) => (bells || []).map(({ _id, ...rest }) => rest);
+const sortAndStrip = (bells) => sortBells(stripIds(bells));
+
 const CLIENT_DEFAULTS = {
   bells: [
     { hour:  8, minute:  0, label: 'Час 1 начало' },
@@ -39,13 +44,24 @@ const initialState = {
 export const fetchSettings = createAsyncThunk('schedule/fetchSettings', async (_, { signal }) => ScheduleService.getSettings(signal));
 export const saveSettings  = createAsyncThunk('schedule/saveSettings',  async (payload, { signal }) => ScheduleService.saveSettings(payload, signal));
 export const fetchToday    = createAsyncThunk('schedule/fetchToday',    async (_, { signal }) => ScheduleService.getToday(signal));
-export const saveToday     = createAsyncThunk('schedule/saveToday',     async (payload, { signal }) => ScheduleService.saveToday(payload, signal));
+export const saveToday     = createAsyncThunk('schedule/saveToday',     async (payload, { signal }) => {
+  const cleaned = payload?.customBells?.bells
+    ? { ...payload, customBells: { ...payload.customBells, bells: sortAndStrip(payload.customBells.bells) } }
+    : payload;
+  return ScheduleService.saveToday(cleaned, signal);
+});
 export const fetchDefault  = createAsyncThunk('schedule/fetchDefault',  async (_, { signal }) => ScheduleService.getDefault(signal));
-export const saveDefault   = createAsyncThunk('schedule/saveDefault',   async (bells, { signal }) => ScheduleService.saveDefault(bells, signal));
+export const saveDefault   = createAsyncThunk('schedule/saveDefault',   async (bells, { signal }) => ScheduleService.saveDefault(sortAndStrip(bells), signal));
 export const fetchTemplates= createAsyncThunk('schedule/fetchTemplates',async (_, { signal }) => ScheduleService.getTemplates(signal));
-export const saveTemplates = createAsyncThunk('schedule/saveTemplates', async (templates, { signal }) => ScheduleService.saveTemplates(templates, signal));
+export const saveTemplates = createAsyncThunk('schedule/saveTemplates', async (templates, { signal }) => {
+  const cleaned = templates.map((tpl) => tpl ? { ...tpl, bells: sortAndStrip(tpl.bells) } : null);
+  return ScheduleService.saveTemplates(cleaned, signal);
+});
 export const fetchExceptions=createAsyncThunk('schedule/fetchExceptions',async (_, { signal }) => ScheduleService.getExceptions(signal));
-export const saveExceptions= createAsyncThunk('schedule/saveExceptions',async (exceptions, { signal }) => ScheduleService.saveExceptions(exceptions, signal));
+export const saveExceptions= createAsyncThunk('schedule/saveExceptions',async (exceptions, { signal }) => {
+  const cleaned = exceptions.map((ex) => ex.bells ? { ...ex, bells: sortAndStrip(ex.bells) } : ex);
+  return ScheduleService.saveExceptions(cleaned, signal);
+});
 export const fetchDefaults = createAsyncThunk('schedule/fetchDefaults', async (_, { signal }) => {
   try { return await ScheduleService.getDefaults(signal); } catch { return CLIENT_DEFAULTS; }
 });
@@ -92,33 +108,45 @@ const scheduleSlice = createSlice({
       if (p?.ringDurationSec !== undefined) s.ringDurationSec = p.ringDurationSec;
     });
     ap(builder, fetchToday, null, (s, p) => {
-      s.today.bells            = sortBells(p?.bells ?? []);
+      s.today.bells            = assignIds(sortBells(p?.bells ?? []));
       s.today.dayType          = p?.dayType ?? null;
       s.today.source           = p?.source ?? null;
       s.today.multiDayException= p?.multiDayException ?? false;
     });
     apSave(builder, saveToday, (s, p) => {
       if (p?.bells) {
-        s.today.bells            = sortBells(p.bells);
+        s.today.bells            = assignIds(sortBells(p.bells));
         s.today.dayType          = p.dayType ?? s.today.dayType;
         s.today.source           = p.source ?? s.today.source;
         s.today.multiDayException= p.multiDayException ?? false;
       }
     });
-    ap(builder, fetchDefault, null, (s, p) => { s.default.bells = sortBells(p?.bells ?? []); });
-    apSave(builder, saveDefault, (s, p) => { if (p?.bells) s.default.bells = sortBells(p.bells); });
+    ap(builder, fetchDefault, null, (s, p) => { s.default.bells = assignIds(sortBells(p?.bells ?? [])); });
+    apSave(builder, saveDefault, (s, p) => { if (p?.bells) s.default.bells = assignIds(sortBells(p.bells)); });
     ap(builder, fetchTemplates, null, (s, p) => {
-      s.templates = p?.templates ?? [null, null, null];
+      s.templates = (p?.templates ?? [null, null, null]).map((tpl) =>
+        tpl ? { ...tpl, bells: assignIds(tpl.bells || []) } : null
+      );
       s.builtins  = p?.builtins ?? [];
     });
     apSave(builder, saveTemplates, (s, p) => {
-      if (p?.templates) s.templates = p.templates;
+      if (p?.templates) s.templates = p.templates.map((tpl) =>
+        tpl ? { ...tpl, bells: assignIds(tpl.bells || []) } : null
+      );
       if (p?.builtins)  s.builtins  = p.builtins;
     });
-    ap(builder, fetchExceptions, null, (s, p) => { s.exceptions = p?.exceptions ?? []; });
-    apSave(builder, saveExceptions, (s, p) => { if (p?.exceptions) s.exceptions = p.exceptions; });
+    ap(builder, fetchExceptions, null, (s, p) => {
+      s.exceptions = (p?.exceptions ?? []).map((ex) =>
+        ex.bells ? { ...ex, bells: assignIds(ex.bells) } : ex
+      );
+    });
+    apSave(builder, saveExceptions, (s, p) => {
+      if (p?.exceptions) s.exceptions = p.exceptions.map((ex) =>
+        ex.bells ? { ...ex, bells: assignIds(ex.bells) } : ex
+      );
+    });
     builder.addCase(fetchDefaults.fulfilled, (s, { payload }) => {
-      if (payload?.bells) s.default.bells = sortBells(payload.bells);
+      if (payload?.bells) s.default.bells = assignIds(sortBells(payload.bells));
     });
   },
 });

@@ -3505,14 +3505,14 @@ body {
   gap: 1px;
 }
 .tp-step {
-  width: 24px;
-  height: 18px;
+  width: 22px;
+  height: 16px;
   padding: 0;
   border: none;
   border-radius: 3px;
   background: transparent;
   color: #555;
-  font-size: 9px;
+  font-size: 8px;
   cursor: pointer;
   line-height: 1;
   transition: background 0.1s, color 0.1s;
@@ -3523,22 +3523,20 @@ body {
 .tp-step:hover:not(:disabled) { background: #1976d2; color: #fff; }
 .tp-step:disabled { opacity: 0.35; cursor: default; }
 .tp-input {
-  width: 36px;
+  width: 32px;
+  height: 20px;
   text-align: center;
   border: none;
   background: transparent;
-  padding: 2px 0;
+  padding: 0;
   font-size: 15px;
   font-family: 'SF Mono', 'Consolas', monospace;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   color: #1a1a1a;
   color-scheme: light;
-  -moz-appearance: textfield;
   outline: none;
 }
-.tp-input::-webkit-inner-spin-button,
-.tp-input::-webkit-outer-spin-button { -webkit-appearance: none; }
 .tp-input::placeholder { color: #aaa; }
 .tp-colon { font-size: 16px; font-weight: 700; color: #444; margin: 0 1px; align-self: center; }
 

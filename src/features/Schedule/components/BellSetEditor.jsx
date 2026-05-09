@@ -6,6 +6,9 @@ function sortBells(bells) {
   return [...bells].sort((a, b) => a.hour * 60 + a.minute - (b.hour * 60 + b.minute));
 }
 
+let _bellIdCounter = 0;
+const newBellId = () => `b-${++_bellIdCounter}`;
+
 /**
  * Reusable bell-set editor.
  *
@@ -43,7 +46,7 @@ export default function BellSetEditor({
 
   // ── helpers ──────────────────────────────────────────────────────────────
 
-  const emit = (newBells) => onChange({ ...(value || {}), bells: sortBells(newBells) });
+  const emit = (newBells) => onChange({ ...(value || {}), bells: newBells });
 
   const updateBell = (idx, patch) =>
     emit(bells.map((b, i) => (i === idx ? { ...b, ...patch } : b)));
@@ -51,7 +54,7 @@ export default function BellSetEditor({
   const removeBell = (idx) => emit(bells.filter((_, i) => i !== idx));
 
   const addBell = () =>
-    emit([...bells, { hour: 8, minute: 0, label: '' }]);
+    emit([...bells, { hour: 8, minute: 0, label: '', _id: newBellId() }]);
 
   // ── auto-generate ────────────────────────────────────────────────────────
 
@@ -278,7 +281,7 @@ export default function BellSetEditor({
                 </thead>
                 <tbody>
                   {bells.map((b, i) => (
-                    <tr key={i}>
+                    <tr key={b._id || i}>
                       <td>
                         {readOnly ? (
                           <span className="bell-time-ro">
