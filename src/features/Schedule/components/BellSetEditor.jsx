@@ -125,6 +125,32 @@ export default function BellSetEditor({
     return t('auto.previewRange', { count: count * 2, from, to });
   })();
 
+  // ── timeline segments (Phase 2) ──────────────────────────────────────────
+
+  const tlStartStr = `${String(autoConfig.startHour).padStart(2, '0')}:${String(autoConfig.startMinute).padStart(2, '0')}`;
+
+  const tlSegs = (() => {
+    const fmt = (m) => `${String(Math.floor(m / 60) % 24).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+    const segs = [];
+    let cursor = autoConfig.startHour * 60 + autoConfig.startMinute;
+    for (let i = 0; i < autoConfig.classCount; i++) {
+      const s = cursor;
+      cursor += autoConfig.classDuration;
+      segs.push({ kind: 'class', label: String(i + 1), startStr: fmt(s), endStr: fmt(cursor), durationMin: autoConfig.classDuration });
+      if (i < autoConfig.classCount - 1) {
+        const isBig = (i + 1 === autoConfig.bigBreakAfterClass);
+        const dur = isBig ? autoConfig.bigBreakDuration : autoConfig.breakDuration;
+        if (dur > 0) {
+          segs.push({ kind: isBig ? 'bigBreak' : 'break', label: '', startStr: fmt(cursor), endStr: fmt(cursor + dur), durationMin: dur });
+        }
+        cursor += dur;
+      }
+    }
+    return segs;
+  })();
+
+  const tlEndStr = tlSegs.length > 0 ? tlSegs[tlSegs.length - 1].endStr : tlStartStr;
+
   // ── render ────────────────────────────────────────────────────────────────
 
   return (
@@ -180,87 +206,135 @@ export default function BellSetEditor({
         </div>
       )}
 
-      {/* ── Auto-generate panel ──────────────────────────────────── */}
+      {/* ── Auto-generate panel (Phase 1: Card Grid) ─────────────── */}
       {mode === 'auto' && !readOnly && (
-        <div className="auto-generate-form">
-          <div className="form-row">
-            <label className="form-label">{t('auto.startTime')}</label>
+        <div className="ag-panel">
+
+          {/* Start Time row */}
+          <div className="ag-start-row">
+            <div className="ag-start-label">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                <circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/>
+              </svg>
+              {t('auto.startTime')}
+            </div>
             <TimePicker24
               value={{ hour: autoConfig.startHour, minute: autoConfig.startMinute }}
               onChange={({ hour, minute }) => setAutoConfig((p) => ({ ...p, startHour: hour, startMinute: minute }))}
             />
           </div>
-          <div className="form-row">
-            <label className="form-label" htmlFor="auto-numClasses">{t('auto.numClasses')}</label>
-            <input
-              id="auto-numClasses"
-              type="number"
-              className="duration-input"
-              min={1}
-              max={20}
-              value={autoConfig.classCount}
-              onChange={(e) => setAutoField('classCount', Math.min(20, Math.max(1, parseInt(e.target.value) || 1)))}
-            />
+
+          {/* 2-column parameter card grid */}
+          <div className="ag-grid">
+
+            {/* Number of Classes */}
+            <div className="ag-card">
+              <div className="ag-card-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                  <rect x="3" y="3" width="7" height="7" rx="1"/>
+                  <rect x="14" y="3" width="7" height="7" rx="1"/>
+                  <rect x="3" y="14" width="7" height="7" rx="1"/>
+                  <rect x="14" y="14" width="7" height="7" rx="1"/>
+                </svg>
+              </div>
+              <div className="ag-card-label">{t('auto.numClasses')}</div>
+              <div className="ag-stepper">
+                <button type="button" className="ag-step-btn"
+                  onClick={() => setAutoField('classCount', Math.max(1, autoConfig.classCount - 1))}>−</button>
+                <span className="ag-step-val">{autoConfig.classCount}</span>
+                <button type="button" className="ag-step-btn"
+                  onClick={() => setAutoField('classCount', Math.min(20, autoConfig.classCount + 1))}>+</button>
+              </div>
+            </div>
+
+            {/* Class Duration */}
+            <div className="ag-card">
+              <div className="ag-card-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M5 2h14M5 22h14M7 2c0 4.5 10 4.5 10 9S7 17.5 7 22M17 2c0 4.5-10 4.5-10 9s10 7.5 10 12"/>
+                </svg>
+              </div>
+              <div className="ag-card-label">{t('auto.classDuration')}</div>
+              <div className="ag-stepper">
+                <button type="button" className="ag-step-btn"
+                  onClick={() => setAutoField('classDuration', Math.max(5, autoConfig.classDuration - 5))}>−</button>
+                <span className="ag-step-val">{autoConfig.classDuration}<span className="ag-step-unit">{t('calendar.min')}</span></span>
+                <button type="button" className="ag-step-btn"
+                  onClick={() => setAutoField('classDuration', Math.min(120, autoConfig.classDuration + 5))}>+</button>
+              </div>
+            </div>
+
+            {/* Break */}
+            <div className="ag-card">
+              <div className="ag-card-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 8h1a4 4 0 0 1 0 8h-1"/>
+                  <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4Z"/>
+                </svg>
+              </div>
+              <div className="ag-card-label">{t('auto.breakDuration')}</div>
+              <div className="ag-stepper">
+                <button type="button" className="ag-step-btn"
+                  onClick={() => setAutoField('breakDuration', Math.max(0, autoConfig.breakDuration - 1))}>−</button>
+                <span className="ag-step-val">{autoConfig.breakDuration}<span className="ag-step-unit">{t('calendar.min')}</span></span>
+                <button type="button" className="ag-step-btn"
+                  onClick={() => setAutoField('breakDuration', Math.min(60, autoConfig.breakDuration + 1))}>+</button>
+              </div>
+            </div>
+
+            {/* Big Break */}
+            <div className="ag-card">
+              <div className="ag-card-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                </svg>
+              </div>
+              <div className="ag-card-label">{t('auto.bigBreakDuration')}</div>
+              <div className="ag-stepper">
+                <button type="button" className="ag-step-btn"
+                  onClick={() => setAutoField('bigBreakDuration', Math.max(0, autoConfig.bigBreakDuration - 5))}>−</button>
+                <span className="ag-step-val">{autoConfig.bigBreakDuration}<span className="ag-step-unit">{t('calendar.min')}</span></span>
+                <button type="button" className="ag-step-btn"
+                  onClick={() => setAutoField('bigBreakDuration', Math.min(60, autoConfig.bigBreakDuration + 5))}>+</button>
+              </div>
+            </div>
+
+            {/* Big Break After — spans both columns */}
+            <div className="ag-card ag-card--span2">
+              <div className="ag-card-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M3 6h18M3 12h10M3 18h10"/><path d="M16 16l3 3 3-3"/>
+                </svg>
+              </div>
+              <div className="ag-card-label">{t('auto.bigBreakAfterClass')}</div>
+              <div className="ag-stepper">
+                <button type="button" className="ag-step-btn"
+                  onClick={() => setAutoField('bigBreakAfterClass', Math.max(1, autoConfig.bigBreakAfterClass - 1))}>−</button>
+                <span className="ag-step-val">{autoConfig.bigBreakAfterClass}</span>
+                <button type="button" className="ag-step-btn"
+                  onClick={() => setAutoField('bigBreakAfterClass', Math.min(Math.max(1, autoConfig.classCount - 1), autoConfig.bigBreakAfterClass + 1))}>+</button>
+              </div>
+            </div>
+
+          </div>{/* /ag-grid */}
+
+          {/* Preview hero banner */}
+          <div className="ag-preview-hero">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+            </svg>
+            <span className="ag-preview-label">{t('auto.preview')}</span>
+            <span className="ag-preview-text">{autoPreview}</span>
           </div>
-          <div className="form-row">
-            <label className="form-label" htmlFor="auto-classDur">{t('auto.classDuration')}</label>
-            <input
-              id="auto-classDur"
-              type="number"
-              className="duration-input"
-              min={5}
-              max={120}
-              value={autoConfig.classDuration}
-              onChange={(e) => setAutoField('classDuration', Math.max(5, parseInt(e.target.value) || 45))}
-            />
-            <span className="form-unit">{t('calendar.min')}</span>
+
+          {/* Footer: CTA + warning */}
+          <div className="ag-footer">
+            <button type="button" className="ag-cta-btn" onClick={generateBells}>
+              {t('auto.generateApply')}
+            </button>
+            <p className="ag-warning">{t('auto.replaceWarningSimple')}</p>
           </div>
-          <div className="form-row">
-            <label className="form-label" htmlFor="auto-breakDur">{t('auto.breakDuration')}</label>
-            <input
-              id="auto-breakDur"
-              type="number"
-              className="duration-input"
-              min={0}
-              max={60}
-              value={autoConfig.breakDuration}
-              onChange={(e) => setAutoField('breakDuration', Math.max(0, parseInt(e.target.value) || 0))}
-            />
-            <span className="form-unit">{t('calendar.min')}</span>
-          </div>
-          <div className="form-row">
-            <label className="form-label" htmlFor="auto-bigBreakDur">{t('auto.bigBreakDuration')}</label>
-            <input
-              id="auto-bigBreakDur"
-              type="number"
-              className="duration-input"
-              min={0}
-              max={60}
-              value={autoConfig.bigBreakDuration}
-              onChange={(e) => setAutoField('bigBreakDuration', Math.max(0, parseInt(e.target.value) || 0))}
-            />
-            <span className="form-unit">{t('calendar.min')}</span>
-          </div>
-          <div className="form-row">
-            <label className="form-label" htmlFor="auto-bigBreakAfter">{t('auto.bigBreakAfterClass')}</label>
-            <input
-              id="auto-bigBreakAfter"
-              type="number"
-              className="duration-input"
-              min={1}
-              max={Math.max(1, autoConfig.classCount - 1)}
-              value={autoConfig.bigBreakAfterClass}
-              onChange={(e) => setAutoField('bigBreakAfterClass', Math.min(Math.max(1, autoConfig.classCount - 1), Math.max(1, parseInt(e.target.value) || 1)))}
-            />
-          </div>
-          <div className="auto-generate-preview">
-            <span className="preview-label">{t('auto.preview')}</span>
-            <span>{autoPreview}</span>
-          </div>
-          <button type="button" className="add-btn generate-btn" onClick={generateBells}>
-            {t('auto.generateApply')}
-          </button>
-          <p className="auto-hint">{t('auto.replaceWarningSimple')}</p>
+
         </div>
       )}
 
