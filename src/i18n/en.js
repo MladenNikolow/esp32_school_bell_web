@@ -109,6 +109,10 @@ const en = {
   'schedule.readOnly': 'Read-only',
   'schedule.builtinTemplates': 'Built-in Templates',
   'schedule.customTemplates': 'Custom Templates',
+  'schedule.builtin.dayOff.desc': 'No bells will ring for the entire day. Apply this template to weekends, public holidays, or any day when school is not in session.',
+  'schedule.builtin.dayOn.desc': 'Bells will ring according to the default schedule, just like a regular school day. Apply this template to reinstate normal bell ringing on a day that was previously set as a day off.',
+  'schedule.builtin.dayOff.detail': 'Silent all day',
+  'schedule.builtin.dayOn.detail': 'Follows default schedule',
   'schedule.multiDayExceptionNote': 'A multi-day exception covers today. Saving will split the exception so only today is modified.',
 
   // Day types (updated)

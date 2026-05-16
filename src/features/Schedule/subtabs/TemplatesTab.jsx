@@ -93,7 +93,32 @@ export default function TemplatesTab() {
                     <span className="template-slot-name">{b.name}</span>
                     <span className="template-readonly-badge">{t('schedule.readOnly')}</span>
                   </div>
-                  <BellSetEditor value={{ bells: b.bells || [] }} onChange={() => {}} readOnly />
+                  <div className={`builtin-template-desc builtin-template-desc--${b.id}`}>
+                    <div className="builtin-template-icon" aria-hidden="true">
+                      {b.id === 'dayOff' ? (
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                          <path d="M18.63 13A17.89 17.89 0 0 1 18 8"/>
+                          <path d="M6.26 6.26A5.86 5.86 0 0 0 6 8c0 7-3 9-3 9h14"/>
+                          <path d="M18 8a6 6 0 0 0-9.33-5"/>
+                          <line x1="1" y1="1" x2="23" y2="23"/>
+                        </svg>
+                      ) : (
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                          <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                        </svg>
+                      )}
+                    </div>
+                    <div className="builtin-template-text">
+                      <span className="builtin-template-detail">
+                        {t(`schedule.builtin.${b.id}.detail`)}
+                      </span>
+                      <p className="builtin-template-body">
+                        {t(`schedule.builtin.${b.id}.desc`)}
+                      </p>
+                    </div>
+                  </div>
                 </div>
               ))}
             </section>
