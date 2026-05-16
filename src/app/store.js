@@ -2,7 +2,6 @@
 import { configureStore } from '@reduxjs/toolkit';
 import modeReducer from '../features/App/AppSlice'
 import authReducer from '../features/Auth/AuthSlice'
-import wifiConfigReducer from '../features/WiFiConfig/WiFiConfigSlice.js'
 import dashboardReducer from '../features/Dashboard/DashboardSlice.js'
 import scheduleReducer from '../features/Schedule/ScheduleSlice.js'
 import settingsReducer from '../features/Settings/SettingsSlice.js'
@@ -12,7 +11,6 @@ export const store = configureStore({
   reducer: {
     mode: modeReducer,
     auth: authReducer,
-    wifiConfig: wifiConfigReducer,
     dashboard: dashboardReducer,
     schedule: scheduleReducer,
     settings: settingsReducer,

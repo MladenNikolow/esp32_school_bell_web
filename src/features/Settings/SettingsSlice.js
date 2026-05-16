@@ -45,22 +45,6 @@ export const savePin = createAsyncThunk(
   }
 );
 
-export const scanWifiNetworks = createAsyncThunk(
-  'settings/scanWifiNetworks',
-  async () => {
-    const data = await httpRequestAgent.get(API_CONFIG.ENDPOINTS.WIFI_NETWORKS);
-    return data.networks;
-  }
-);
-
-export const saveWifiCredentials = createAsyncThunk(
-  'settings/saveWifiCredentials',
-  async ({ ssid, password }) => {
-    const data = await httpRequestAgent.post(API_CONFIG.ENDPOINTS.WIFI_CONFIG, { ssid, password });
-    return data;
-  }
-);
-
 export const fetchCredentials = createAsyncThunk(
   'settings/fetchCredentials',
   async () => {
@@ -100,9 +84,6 @@ const settingsSlice = createSlice({
     resetting: false,
     error: null,
     actionSuccess: null,
-    wifiNetworks: [],
-    wifiScanning: false,
-    wifiSaving: false,
     syncing: false,
     currentPin: null,
     pinLoading: false,
@@ -179,29 +160,6 @@ const settingsSlice = createSlice({
       })
       .addCase(savePin.rejected, (state, { error }) => {
         state.pinSaving = false;
-        state.error = error.message;
-      })
-      .addCase(scanWifiNetworks.pending, (state) => {
-        state.wifiScanning = true;
-      })
-      .addCase(scanWifiNetworks.fulfilled, (state, { payload }) => {
-        state.wifiScanning = false;
-        state.wifiNetworks = payload;
-      })
-      .addCase(scanWifiNetworks.rejected, (state, { error }) => {
-        state.wifiScanning = false;
-        state.error = error.message;
-      })
-      .addCase(saveWifiCredentials.pending, (state) => {
-        state.wifiSaving = true;
-      })
-      .addCase(saveWifiCredentials.fulfilled, (state) => {
-        state.wifiSaving = false;
-        state.rebooting = true;
-        state.actionSuccess = 'WiFi credentials saved. Device is restarting…';
-      })
-      .addCase(saveWifiCredentials.rejected, (state, { error }) => {
-        state.wifiSaving = false;
         state.error = error.message;
       })
       .addCase(fetchCredentials.pending, (state) => {

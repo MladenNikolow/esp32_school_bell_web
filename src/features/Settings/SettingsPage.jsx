@@ -8,7 +8,6 @@ import {
 } from '../Schedule/ScheduleSlice.js';
 import {
   fetchSystemInfo, rebootDevice, factoryReset, syncTime,
-  scanWifiNetworks, saveWifiCredentials,
   fetchPin, savePin,
   fetchCredentials, saveCredentials, deleteCredentials,
   clearError, clearActionSuccess,
@@ -50,7 +49,6 @@ export default function SettingsPage() {
 
   /* Settings state (system info, actions) */
   const { systemInfo, rebooting, resetting, syncing, error, actionSuccess,
-    wifiNetworks, wifiScanning, wifiSaving,
     currentPin, pinLoading, pinSaving,
     clientCredentials, credentialsLoading, credentialsSaving, credentialsDeleting } =
     useSelector((s) => s.settings);
@@ -59,10 +57,6 @@ export default function SettingsPage() {
   const user = useSelector((s) => s.auth.user);
   const isService = user?.role === 'service';
 
-  const [wifiSsid, setWifiSsid] = useState('');
-  const [wifiPassword, setWifiPassword] = useState('');
-  const [showWifiPassword, setShowWifiPassword] = useState(false);
-  const [wifiExpanded, setWifiExpanded] = useState(null);
   const [newPin, setNewPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
   const [pinError, setPinError] = useState('');
@@ -104,35 +98,6 @@ export default function SettingsPage() {
 
   const handleSaveSettings = () => {
     dispatch(saveSettings({ timezone, workingDays, ringDurationSec }));
-  };
-
-  const handleScanWifi = () => {
-    dispatch(scanWifiNetworks());
-  };
-
-  const handleSelectNetwork = (network) => {
-    const id = network.bssid || network.ssid;
-    if (wifiExpanded === id) {
-      setWifiExpanded(null);
-      setWifiPassword('');
-      setShowWifiPassword(false);
-    } else {
-      setWifiExpanded(id);
-      setWifiSsid(network.ssid);
-      setWifiPassword('');
-      setShowWifiPassword(false);
-    }
-  };
-
-  const handleSaveWifi = () => {
-    if (!wifiSsid.trim()) return;
-    if (!window.confirm(t('settings.wifiConfirm', { ssid: wifiSsid.trim() }))) return;
-    dispatch(saveWifiCredentials({ ssid: wifiSsid.trim(), password: wifiPassword })).then((result) => {
-      if (result.meta.requestStatus === 'fulfilled') {
-        TokenManager.clearStoredToken();
-        setTimeout(() => window.location.reload(), 5000);
-      }
-    });
   };
 
   const handleReboot = () => {
@@ -426,125 +391,6 @@ export default function SettingsPage() {
           </div>
         </div>
       )}
-
-      {/* WiFi Credentials */}
-      <div className="sched-card">
-        <h3>{t('settings.wifiCredentials')}</h3>
-        <p className="card-desc">{t('settings.wifiCredentialsDesc')}</p>
-
-        <div className="settings-section">
-          <button
-            className={`save-button${wifiScanning ? ' loading' : ''}`}
-            onClick={handleScanWifi}
-            disabled={wifiScanning}
-            style={{ marginBottom: 12 }}
-          >
-            {wifiScanning ? t('settings.wifiScanning') : t('settings.wifiScan')}
-          </button>
-
-          {wifiNetworks.length > 0 && (
-            <div className="network-list">
-              {[...wifiNetworks].sort((a, b) => b.rssi - a.rssi).map((network, idx) => {
-                const networkId = network.bssid || `${network.ssid}-${idx}`;
-                const isExpanded = wifiExpanded === networkId;
-                return (
-                  <div key={networkId} className={`network-item${isExpanded ? ' expanded' : ''}`}>
-                    <div
-                      className="network-item-header"
-                      onClick={() => handleSelectNetwork({ ...network, bssid: networkId })}
-                    >
-                      <span className="network-ssid">
-                        {network.ssid || t('settings.wifiHidden')}
-                      </span>
-                      <span className="network-info">
-                        {network.secured && <span className="lock-icon">🔒</span>}
-                        <span className="wifi-rssi">{network.rssi} dBm</span>
-                        <span className="expand-arrow">{isExpanded ? '▲' : '▼'}</span>
-                      </span>
-                    </div>
-                    {isExpanded && (
-                      <div className="network-item-body">
-                        {network.secured && (
-                          <div className="password-input-container" style={{ marginBottom: 8 }}>
-                            <input
-                              type={showWifiPassword ? 'text' : 'password'}
-                              className="form-input"
-                              value={wifiPassword}
-                              onChange={(e) => setWifiPassword(e.target.value)}
-                              placeholder={t('settings.wifiEnterPassword')}
-                              disabled={wifiSaving}
-                              onKeyDown={(e) => { if (e.key === 'Enter') handleSaveWifi(); }}
-                            />
-                            <button
-                              type="button"
-                              className="password-toggle"
-                              onClick={() => setShowWifiPassword(!showWifiPassword)}
-                              disabled={wifiSaving}
-                            >
-                              {showWifiPassword ? '👁️' : '👁️‍🗨️'}
-                            </button>
-                          </div>
-                        )}
-                        <button
-                          className={`save-button${wifiSaving ? ' loading' : ''}`}
-                          onClick={handleSaveWifi}
-                          disabled={wifiSaving || (network.secured && !wifiPassword)}
-                        >
-                          {wifiSaving ? t('settings.wifiSaving') : t('settings.wifiSave')}
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        <div className="settings-section" style={{ borderBottom: 'none', marginBottom: 0 }}>
-          <h4>{t('settings.wifiManual')}</h4>
-          <div className="settings-row">
-            <label className="form-label">{t('settings.wifiSsidLabel')}</label>
-            <input
-              type="text"
-              className="form-input"
-              value={wifiSsid}
-              onChange={(e) => { setWifiSsid(e.target.value); setWifiExpanded(null); }}
-              placeholder={t('settings.wifiSsidPlaceholder')}
-              disabled={wifiSaving}
-            />
-          </div>
-          <div className="settings-row">
-            <label className="form-label">{t('settings.wifiPasswordLabel')}</label>
-            <div className="password-input-container">
-              <input
-                type={showWifiPassword ? 'text' : 'password'}
-                className="form-input"
-                value={wifiPassword}
-                onChange={(e) => setWifiPassword(e.target.value)}
-                placeholder={t('settings.wifiEnterPassword')}
-                disabled={wifiSaving}
-                onKeyDown={(e) => { if (e.key === 'Enter') handleSaveWifi(); }}
-              />
-              <button
-                type="button"
-                className="password-toggle"
-                onClick={() => setShowWifiPassword(!showWifiPassword)}
-                disabled={wifiSaving}
-              >
-                {showWifiPassword ? '👁️' : '👁️‍🗨️'}
-              </button>
-            </div>
-          </div>
-          <button
-            className={`save-button${wifiSaving ? ' loading' : ''}`}
-            onClick={handleSaveWifi}
-            disabled={wifiSaving || !wifiSsid.trim()}
-          >
-            {wifiSaving ? t('settings.wifiSaving') : t('settings.wifiSave')}
-          </button>
-        </div>
-      </div>
 
       {/* Time Synchronization */}
       <div className="sched-card">

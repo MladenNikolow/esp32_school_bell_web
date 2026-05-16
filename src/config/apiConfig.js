@@ -19,11 +19,6 @@ export const API_CONFIG = {
     STATUS: '/api/status',
     HEALTH: '/api/health',
 
-    // WiFi configuration endpoints
-    WIFI_STATUS: '/api/wifi/status',
-    WIFI_NETWORKS: '/api/wifi/networks',
-    WIFI_CONFIG: '/api/wifi/config',
-
     // Schedule endpoints
     SCHEDULE_SETTINGS: '/api/schedule/settings',
     SCHEDULE_DEFAULT: '/api/schedule/default',
@@ -51,9 +46,6 @@ export const API_CONFIG = {
     '/api/validate-token',
     '/api/health',
     '/api/status',
-    '/api/wifi/status',
-    '/api/wifi/networks',
-    '/api/wifi/config',
   ],
   
   // HTTP status codes
