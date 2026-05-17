@@ -50,6 +50,26 @@ class HttpRequestAgent {
     }
   }
 
+  async put(endpoint, data, signal = null) {
+    try {
+      const response = await this.httpClient.put(endpoint, data, { signal });
+      return this._parseResponse(response);
+    } catch (error) {
+      if (error.name === 'AbortError') throw error;
+      throw new Error(error.message || 'PUT request failed');
+    }
+  }
+
+  async delete(endpoint, signal = null) {
+    try {
+      const response = await this.httpClient.delete(endpoint, { signal });
+      return this._parseResponse(response);
+    } catch (error) {
+      if (error.name === 'AbortError') throw error;
+      throw new Error(error.message || 'DELETE request failed');
+    }
+  }
+
   /**
    * Make a login request (unauthenticated)
    * The server responds with a Set-Cookie header containing the HttpOnly session cookie.

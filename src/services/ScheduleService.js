@@ -25,12 +25,30 @@ const ScheduleService = {
   saveToday: (payload, signal) =>
     agent.post(API_CONFIG.ENDPOINTS.SCHEDULE_TODAY, payload, signal),
 
-  // Exceptions
-  getExceptions: (signal) =>
-    agent.get(API_CONFIG.ENDPOINTS.SCHEDULE_EXCEPTIONS, signal),
+  // Exceptions — granular CRUD + paginated list
+  /** GET /api/schedule/exceptions?offset=&limit=&from=&to= */
+  getExceptions: ({ offset = 0, limit = 10, from, to } = {}, signal) => {
+    let url = `${API_CONFIG.ENDPOINTS.SCHEDULE_EXCEPTIONS}?offset=${offset}&limit=${limit}`;
+    if (from) url += `&from=${encodeURIComponent(from)}`;
+    if (to)   url += `&to=${encodeURIComponent(to)}`;
+    return agent.get(url, signal);
+  },
 
-  saveExceptions: (exceptions, signal) =>
-    agent.post(API_CONFIG.ENDPOINTS.SCHEDULE_EXCEPTIONS, { exceptions }, signal),
+  /** GET /api/schedule/exceptions/:id */
+  getExceptionById: (id, signal) =>
+    agent.get(`${API_CONFIG.ENDPOINTS.SCHEDULE_EXCEPTIONS}/${id}`, signal),
+
+  /** POST /api/schedule/exceptions → 201 { status, id } */
+  createException: (exceptionData, signal) =>
+    agent.post(API_CONFIG.ENDPOINTS.SCHEDULE_EXCEPTIONS, exceptionData, signal),
+
+  /** PUT /api/schedule/exceptions/:id */
+  updateException: (id, exceptionData, signal) =>
+    agent.put(`${API_CONFIG.ENDPOINTS.SCHEDULE_EXCEPTIONS}/${id}`, exceptionData, signal),
+
+  /** DELETE /api/schedule/exceptions/:id */
+  deleteException: (id, signal) =>
+    agent.delete(`${API_CONFIG.ENDPOINTS.SCHEDULE_EXCEPTIONS}/${id}`, signal),
 
   // Templates
   getTemplates: (signal) =>

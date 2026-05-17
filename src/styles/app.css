@@ -4478,6 +4478,26 @@ body {
 
 /* Exceptions list — card surfaces with hover shadow */
 .exceptions-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
+
+/* Pagination bar */
+.pagination-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin: 10px 0 14px;
+}
+.page-btn {
+  padding: 4px 14px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color, #ccc);
+  background: var(--bg-card, #fff);
+  cursor: pointer;
+  font-size: 13px;
+}
+.page-btn:disabled { opacity: 0.4; cursor: default; }
+.page-info { font-size: 13px; color: var(--text-muted, #666); }
+
 .exception-entry {
   display: flex;
   align-items: flex-start;

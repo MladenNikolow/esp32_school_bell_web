@@ -31,7 +31,18 @@ const initialState = {
   default: { bells: [] },
   templates: [null, null, null],
   builtins: [],
-  exceptions: [],
+  /** Paginated exception list (metadata only) */
+  exceptions: {
+    items: [],
+    total: 0,
+    offset: 0,
+    limit: 10,
+    hasMore: false,
+    loading: false,
+    error: null,
+  },
+  /** Full exception details keyed by id (loaded on expand) */
+  exceptionDetail: {},
   timezone: '',
   workingDays: [1, 2, 3, 4, 5],
   ringDurationSec: 3,
@@ -57,11 +68,31 @@ export const saveTemplates = createAsyncThunk('schedule/saveTemplates', async (t
   const cleaned = templates.map((tpl) => tpl ? { ...tpl, bells: sortAndStrip(tpl.bells) } : null);
   return ScheduleService.saveTemplates(cleaned, signal);
 });
-export const fetchExceptions=createAsyncThunk('schedule/fetchExceptions',async (_, { signal }) => ScheduleService.getExceptions(signal));
-export const saveExceptions= createAsyncThunk('schedule/saveExceptions',async (exceptions, { signal }) => {
-  const cleaned = exceptions.map((ex) => ex.bells ? { ...ex, bells: sortAndStrip(ex.bells) } : ex);
-  return ScheduleService.saveExceptions(cleaned, signal);
-});
+export const fetchExceptions = createAsyncThunk(
+  'schedule/fetchExceptions',
+  async ({ offset = 0, limit = 10, from, to } = {}, { signal }) =>
+    ScheduleService.getExceptions({ offset, limit, from, to }, signal)
+);
+
+export const fetchExceptionById = createAsyncThunk(
+  'schedule/fetchExceptionById',
+  async (id, { signal }) => ScheduleService.getExceptionById(id, signal)
+);
+
+export const createException = createAsyncThunk(
+  'schedule/createException',
+  async (data, { signal }) => ScheduleService.createException(data, signal)
+);
+
+export const updateException = createAsyncThunk(
+  'schedule/updateException',
+  async ({ id, data }, { signal }) => ScheduleService.updateException(id, data, signal)
+);
+
+export const deleteException = createAsyncThunk(
+  'schedule/deleteException',
+  async (id, { signal }) => ScheduleService.deleteException(id, signal)
+);
 export const fetchDefaults = createAsyncThunk('schedule/fetchDefaults', async (_, { signal }) => {
   try { return await ScheduleService.getDefaults(signal); } catch { return CLIENT_DEFAULTS; }
 });
@@ -94,7 +125,7 @@ const scheduleSlice = createSlice({
     setTodayBells(state, { payload })   { state.today.bells = payload; },
     setDefaultBells(state, { payload }) { state.default.bells = payload; },
     setTemplates(state, { payload })    { state.templates = payload; },
-    setExceptions(state, { payload })   { state.exceptions = payload; },
+    clearExceptionDetail(state, { payload: id }) { delete state.exceptionDetail[id]; },
   },
   extraReducers: (builder) => {
     ap(builder, fetchSettings, null, (s, p) => {
@@ -135,16 +166,56 @@ const scheduleSlice = createSlice({
       );
       if (p?.builtins)  s.builtins  = p.builtins;
     });
-    ap(builder, fetchExceptions, null, (s, p) => {
-      s.exceptions = (p?.exceptions ?? []).map((ex) =>
-        ex.bells ? { ...ex, bells: assignIds(ex.bells) } : ex
-      );
-    });
-    apSave(builder, saveExceptions, (s, p) => {
-      if (p?.exceptions) s.exceptions = p.exceptions.map((ex) =>
-        ex.bells ? { ...ex, bells: assignIds(ex.bells) } : ex
-      );
-    });
+    // Exception list (paginated)
+    builder
+      .addCase(fetchExceptions.pending,   (s) => { s.exceptions.loading = true;  s.exceptions.error = null; })
+      .addCase(fetchExceptions.rejected,  (s, { error }) => { s.exceptions.loading = false; s.exceptions.error = error.message; })
+      .addCase(fetchExceptions.fulfilled, (s, { payload: p }) => {
+        s.exceptions.loading = false;
+        s.exceptions.items   = p?.items   ?? [];
+        s.exceptions.total   = p?.total   ?? 0;
+        s.exceptions.offset  = p?.offset  ?? 0;
+        s.exceptions.limit   = p?.limit   ?? 10;
+        s.exceptions.hasMore = p?.hasMore ?? false;
+      });
+
+    // Exception detail (fetched on expand)
+    builder
+      .addCase(fetchExceptionById.fulfilled, (s, { payload: p }) => {
+        if (p?.id != null) {
+          const bells = p.customBells?.bells ?? [];
+          s.exceptionDetail[p.id] = {
+            ...p,
+            customBells: { bells: assignIds(sortBells(bells)) },
+          };
+        }
+      });
+
+    // Create exception — refresh the list
+    builder
+      .addCase(createException.pending,   (s) => { s.saving = true;  s.error = null; })
+      .addCase(createException.rejected,  (s, { error }) => { s.saving = false; s.error = error.message; })
+      .addCase(createException.fulfilled, (s) => { s.saving = false; s.saveSuccess = true; });
+
+    // Update exception
+    builder
+      .addCase(updateException.pending,   (s) => { s.saving = true;  s.error = null; })
+      .addCase(updateException.rejected,  (s, { error }) => { s.saving = false; s.error = error.message; })
+      .addCase(updateException.fulfilled, (s, { meta: { arg: { id } } }) => {
+        s.saving = false;
+        s.saveSuccess = true;
+        // Evict cached detail so next expand re-fetches
+        delete s.exceptionDetail[id];
+      });
+
+    // Delete exception — evict from detail cache, refresh handled by component
+    builder
+      .addCase(deleteException.pending,   (s) => { s.saving = true;  s.error = null; })
+      .addCase(deleteException.rejected,  (s, { error }) => { s.saving = false; s.error = error.message; })
+      .addCase(deleteException.fulfilled, (s, { meta: { arg: id } }) => {
+        s.saving = false;
+        delete s.exceptionDetail[id];
+      });
     builder.addCase(fetchDefaults.fulfilled, (s, { payload }) => {
       if (payload?.bells) s.default.bells = assignIds(sortBells(payload.bells));
     });
@@ -154,7 +225,7 @@ const scheduleSlice = createSlice({
 export const {
   clearError, clearSaveSuccess,
   setWorkingDays, setTimezone, setRingDurationSec,
-  setTodayBells, setDefaultBells, setTemplates, setExceptions,
+  setTodayBells, setDefaultBells, setTemplates, clearExceptionDetail,
 } = scheduleSlice.actions;
 
 export default scheduleSlice.reducer;
