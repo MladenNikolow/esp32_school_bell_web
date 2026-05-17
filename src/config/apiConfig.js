@@ -43,6 +43,10 @@ export const API_CONFIG = {
     SYSTEM_UPDATE_ABORT: '/api/system/update/abort',
     SYSTEM_ROLLBACK: '/api/system/rollback',
     SCHEDULE_DEFAULTS: '/api/schedule/defaults',
+
+    // Diagnostics endpoints
+    DIAGNOSTICS: '/api/diagnostics',
+    DIAGNOSTICS_CLEAR: '/api/diagnostics/clear',
   },
   
   // Public endpoints that don't require authentication

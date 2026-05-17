@@ -14,7 +14,7 @@
 ```
 src/
 ├── app/
-│   └── store.js                     Redux store — slices: mode, auth, wifiConfig, dashboard, schedule, settings
+│   └── store.js                     Redux store — slices: mode, auth, wifiConfig, dashboard, schedule, settings, diagnostics
 │
 ├── components/
 │   └── RingyLogo.jsx                Shared logo component
@@ -41,7 +41,7 @@ src/
 │   │   └── DeviceClock.jsx          Clock polling /api/status
 │   │
 │   ├── Navigation/
-│   │   └── Navigation.jsx           Top tab bar — tabs: dashboard | schedule | settings
+│   │   └── Navigation.jsx           Top tab bar — tabs: dashboard | schedule | settings | diagnostics
 │   │
 │   ├── Schedule/
 │   │   ├── SchedulePage.jsx         Sub-tab container (Today / Default / Templates / Exceptions)
@@ -78,6 +78,10 @@ src/
 │   │   └── components/
 │   │       └── WiFiConfigPage.jsx   Setup wizard (shown when no WiFi credentials on device)
 │   │
+│   ├── Diagnostics/
+│   │   ├── DiagnosticsPage.jsx      Health badge, subsystem tiles, recent events, clear-log modal (polls /api/diagnostics every 10s)
+│   │   └── DiagnosticsSlice.js      diagnostics slice — fetchDiagnostics, clearDiagnostics thunks
+│   │
 │   ├── Calendar/                    DEAD CODE — removed from store and navigation in Phase 5
 │   │   ├── CalendarPage.jsx
 │   │   └── CalendarSlice.js
@@ -103,6 +107,7 @@ src/
 │   ├── ScheduleService.js           getSettings/saveSettings, getToday/saveToday,
 │   │                                getDefault/saveDefault, getTemplates/saveTemplates,
 │   │                                getExceptions/saveExceptions, getDefaults
+│   ├── DiagnosticsService.js        get() (health + events snapshot), clear() (service role only)
 │   └── __tests__/
 │       └── AuthService.test.js
 │

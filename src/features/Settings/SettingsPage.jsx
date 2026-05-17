@@ -19,26 +19,6 @@ import FirmwareUpdatePanel from './FirmwareUpdatePanel.jsx';
 
 const ORDERED_DAYS = [1, 2, 3, 4, 5, 6, 0];
 
-function formatUptime(sec) {
-  if (!sec && sec !== 0) return '—';
-  const d = Math.floor(sec / 86400);
-  const h = Math.floor((sec % 86400) / 3600);
-  const m = Math.floor((sec % 3600) / 60);
-  const s = sec % 60;
-  const parts = [];
-  if (d > 0) parts.push(`${d}d`);
-  if (h > 0) parts.push(`${h}h`);
-  if (m > 0) parts.push(`${m}m`);
-  parts.push(`${s}s`);
-  return parts.join(' ');
-}
-
-function formatBytes(bytes) {
-  if (!bytes && bytes !== 0) return '—';
-  if (bytes >= 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${bytes} B`;
-}
-
 export default function SettingsPage() {
   const dispatch = useDispatch();
   const { t } = useLocale();
@@ -403,7 +383,7 @@ export default function SettingsPage() {
             <span className="info-label">{t('settings.sntpStatus')}</span>
             <span className={`info-value ${systemInfo && !systemInfo.timeSynced ? 'text-warn' : ''}`}>
               {systemInfo ? (systemInfo.timeSynced ? t('settings.synchronized') : t('settings.notSynchronized')) : '—'}
-              {systemInfo?.lastSyncAgeSec != null && systemInfo.lastSyncAgeSec < 4294967295
+              {systemInfo?.timeSynced && systemInfo?.lastSyncAgeSec != null && systemInfo.lastSyncAgeSec < 4294967295
                 ? ` (${Math.floor(systemInfo.lastSyncAgeSec / 60)}m ago)`
                 : ''}
             </span>
@@ -461,64 +441,6 @@ export default function SettingsPage() {
               {resetting ? t('settings.resetting') : t('settings.factoryResetBtn')}
             </button>
           </div>
-        </div>
-      </div>
-
-      {/* System Information */}
-      <div className="sched-card">
-        <h3>{t('settings.systemInfo')}</h3>
-
-        <div className="info-grid">
-          <div className="info-item">
-            <span className="info-label">{t('settings.deviceTime')}</span>
-            <span className="info-value">{systemInfo?.time || '—'}</span>
-          </div>
-          <div className="info-item">
-            <span className="info-label">{t('settings.date')}</span>
-            <span className="info-value">{systemInfo?.date || '—'}</span>
-          </div>
-          <div className="info-item">
-            <span className="info-label">{t('settings.sntpStatus')}</span>
-            <span className={`info-value ${systemInfo && !systemInfo.timeSynced ? 'text-warn' : ''}`}>
-              {systemInfo ? (systemInfo.timeSynced ? t('settings.synchronized') : t('settings.notSynchronized')) : '—'}
-              {systemInfo?.lastSyncAgeSec != null && systemInfo.lastSyncAgeSec < 4294967295
-                ? ` (${Math.floor(systemInfo.lastSyncAgeSec / 60)}m ago)`
-                : ''}
-            </span>
-          </div>
-          <div className="info-item">
-            <span className="info-label">{t('settings.activeTimezone')}</span>
-            <span className="info-value">{systemInfo?.timezone || '—'}</span>
-          </div>
-          <div className="info-item">
-            <span className="info-label">{t('settings.uptime')}</span>
-            <span className="info-value">{formatUptime(systemInfo?.uptimeSec)}</span>
-          </div>
-          <div className="info-item">
-            <span className="info-label">{t('settings.freeHeap')}</span>
-            <span className="info-value">{formatBytes(systemInfo?.freeHeap)}</span>
-          </div>
-          <div className="info-item">
-            <span className="info-label">{t('settings.minFreeHeap')}</span>
-            <span className="info-value">{formatBytes(systemInfo?.minFreeHeap)}</span>
-          </div>
-          <div className="info-item">
-            <span className="info-label">{t('settings.cpuCores')}</span>
-            <span className="info-value">{systemInfo?.chipCores ?? '—'}</span>
-          </div>
-          <div className="info-item">
-            <span className="info-label">{t('settings.idfVersion')}</span>
-            <span className="info-value">{systemInfo?.idfVersion || '—'}</span>
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
-          <button
-            className="refresh-btn"
-            onClick={() => dispatch(fetchSystemInfo())}
-          >
-            {t('settings.refresh')}
-          </button>
         </div>
       </div>
 
