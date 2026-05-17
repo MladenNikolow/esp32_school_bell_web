@@ -176,6 +176,8 @@ const en = {
   'auto.numClasses': 'Number of Classes',
   'auto.preview': 'Preview:',
   'auto.classes': 'classes',
+  'auto.chip.bells': 'rings',
+  'auto.chip.classes': 'classes',
   'auto.sharedSettings': 'Timing',
   'auto.classDuration': 'Class Duration',
   'auto.breakDuration': 'Break',

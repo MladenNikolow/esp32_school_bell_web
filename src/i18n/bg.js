@@ -176,6 +176,8 @@ const bg = {
   'auto.numClasses': 'Брой часове',
   'auto.preview': 'Преглед:',
   'auto.classes': 'часа',
+  'auto.chip.bells': 'звънения',
+  'auto.chip.classes': 'учебни часа',
   'auto.sharedSettings': 'Времена',
   'auto.classDuration': 'Учебен час',
   'auto.breakDuration': 'Междучасие',

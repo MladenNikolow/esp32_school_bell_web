@@ -107,22 +107,19 @@ export default function BellSetEditor({
 
   // ── preview calc ──────────────────────────────────────────────────────────
 
-  const autoPreview = (() => {
+  const previewFrom = `${String(autoConfig.startHour).padStart(2, '0')}:${String(autoConfig.startMinute).padStart(2, '0')}`;
+  const previewBellCount = autoConfig.classCount * 2;
+  const previewTo = (() => {
     let last = autoConfig.startHour * 60 + autoConfig.startMinute;
-    const count = autoConfig.classCount;
-    for (let i = 0; i < count; i++) {
+    for (let i = 0; i < autoConfig.classCount; i++) {
       last += autoConfig.classDuration;
-      if (i < count - 1) {
+      if (i < autoConfig.classCount - 1) {
         last += (i + 1 === autoConfig.bigBreakAfterClass)
           ? autoConfig.bigBreakDuration
           : autoConfig.breakDuration;
       }
     }
-    const endH = Math.floor(last / 60) % 24;
-    const endM = last % 60;
-    const from = `${String(autoConfig.startHour).padStart(2, '0')}:${String(autoConfig.startMinute).padStart(2, '0')}`;
-    const to = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
-    return t('auto.previewRange', { count: count * 2, from, to });
+    return `${String(Math.floor(last / 60) % 24).padStart(2, '0')}:${String(last % 60).padStart(2, '0')}`;
   })();
 
   // ── timeline segments (Phase 2) ──────────────────────────────────────────
@@ -318,13 +315,37 @@ export default function BellSetEditor({
 
           </div>{/* /ag-grid */}
 
-          {/* Preview hero banner */}
+          {/* Preview hero banner — 3 chips */}
           <div className="ag-preview-hero">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
-            </svg>
             <span className="ag-preview-label">{t('auto.preview')}</span>
-            <span className="ag-preview-text">{autoPreview}</span>
+            <div className="ag-preview-chips">
+              <div className="ag-preview-chip ag-preview-chip--bells">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                  <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                </svg>
+                <span className="ag-chip-count">{previewBellCount}</span>
+                <span className="ag-chip-label">{t('auto.chip.bells')}</span>
+              </div>
+              <span className="ag-chip-sep">·</span>
+              <div className="ag-preview-chip ag-preview-chip--classes">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+                  <rect x="3" y="3" width="7" height="7" rx="1"/>
+                  <rect x="14" y="3" width="7" height="7" rx="1"/>
+                  <rect x="3" y="14" width="7" height="7" rx="1"/>
+                  <rect x="14" y="14" width="7" height="7" rx="1"/>
+                </svg>
+                <span className="ag-chip-count">{autoConfig.classCount}</span>
+                <span className="ag-chip-label">{t('auto.chip.classes')}</span>
+              </div>
+              <span className="ag-chip-sep">·</span>
+              <div className="ag-preview-chip ag-preview-chip--time">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round">
+                  <circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/>
+                </svg>
+                <span className="ag-chip-time">{previewFrom} → {previewTo}</span>
+              </div>
+            </div>
           </div>
 
           {/* Footer: CTA + warning */}
