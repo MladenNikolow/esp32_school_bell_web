@@ -134,7 +134,7 @@ const en = {
   // Settings — ring duration
   'settings.ringDuration': 'Bell Ring Duration',
   'settings.ringDurationDesc': 'How long the bell relay stays active for every scheduled ring. Applies to all bells globally.',
-  'settings.ringDurationSec': 'Duration (1–300 s)',
+  'settings.ringDurationSec': 'Duration (1–30 s)',
 
   // Schedule
   'schedule.bellTimetable': 'Bell Timetable',
