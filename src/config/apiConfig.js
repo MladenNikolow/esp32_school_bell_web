@@ -37,6 +37,11 @@ export const API_CONFIG = {
     SYSTEM_SYNC_TIME: '/api/system/sync-time',
     SYSTEM_PIN: '/api/system/pin',
     SYSTEM_CREDENTIALS: '/api/system/credentials',
+    SYSTEM_FIRMWARE: '/api/system/firmware',
+    SYSTEM_UPDATE: '/api/system/update',
+    SYSTEM_UPDATE_STATUS: '/api/system/update/status',
+    SYSTEM_UPDATE_ABORT: '/api/system/update/abort',
+    SYSTEM_ROLLBACK: '/api/system/rollback',
     SCHEDULE_DEFAULTS: '/api/schedule/defaults',
   },
   
