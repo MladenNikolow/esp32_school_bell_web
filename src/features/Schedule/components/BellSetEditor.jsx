@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import useLocale from '../../../hooks/useLocale.jsx';
 import TimePicker24 from './TimePicker24.jsx';
+import { fetchDefault } from '../ScheduleSlice.js';
 
 function sortBells(bells) {
   return [...bells].sort((a, b) => a.hour * 60 + a.minute - (b.hour * 60 + b.minute));
@@ -29,7 +31,19 @@ export default function BellSetEditor({
   readOnly = false,
 }) {
   const { t } = useLocale();
+  const dispatch = useDispatch();
+  const defaultBells = useSelector((s) => s.schedule?.default?.bells ?? []);
   const bells = value?.bells || [];
+
+  // Built-in "Day On" template resolves to the current default schedule at
+  // apply-time. Make sure the default schedule is loaded so applying it does
+  // not silently produce an empty bell list.
+  useEffect(() => {
+    if (allowApplyTemplate && (!defaultBells || defaultBells.length === 0)) {
+      dispatch(fetchDefault());
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allowApplyTemplate]);
 
   const [mode, setMode] = useState('manual');
   const [applyTplIdx, setApplyTplIdx] = useState('builtin-0');
@@ -89,8 +103,18 @@ export default function BellSetEditor({
 
   // ── apply template ────────────────────────────────────────────────────────
 
+  // Built-ins arrive from the API without any bells payload — they are
+  // semantic sentinels. Resolve them here:
+  //   • dayOff → empty schedule
+  //   • dayOn  → snapshot of the current default schedule
+  const resolveBuiltinBells = (b) => {
+    if (b?.id === 'dayOn')  return (defaultBells || []).map(({ _id, ...rest }) => rest);
+    if (b?.id === 'dayOff') return [];
+    return b?.bells || [];
+  };
+
   const allTemplateOptions = [
-    ...builtins.map((b, i) => ({ key: `builtin-${i}`, label: b.name, bells: b.bells || [] })),
+    ...builtins.map((b, i) => ({ key: `builtin-${i}`, label: b.name, bells: resolveBuiltinBells(b) })),
     ...templates.map((tpl, i) => tpl
       ? { key: `custom-${i}`, label: tpl.name || t('calendar.templateSlot', { n: i + 1 }), bells: tpl.bells || [] }
       : null

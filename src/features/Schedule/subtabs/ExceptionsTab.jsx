@@ -3,6 +3,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import {
   fetchExceptions, fetchExceptionById,
   createException, updateException, deleteException,
+  fetchTemplates,
   clearError, clearSaveSuccess, clearExceptionDetail,
 } from '../ScheduleSlice.js';
 import BellSetEditor from '../components/BellSetEditor.jsx';
@@ -55,6 +56,13 @@ export default function ExceptionsTab() {
   useEffect(() => {
     loadPage(0);
   }, [loadPage]);
+
+  // Templates are needed to resolve template-based exceptions and to power the
+  // "Apply Template" picker inside the custom-bell editor. They might not be
+  // loaded yet if the user lands directly on the Exceptions tab.
+  useEffect(() => {
+    dispatch(fetchTemplates());
+  }, [dispatch]);
 
   useEffect(() => {
     if (saveSuccess) {

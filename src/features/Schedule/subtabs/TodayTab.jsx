@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import {
-  fetchToday, saveToday,
+  fetchToday, saveToday, fetchTemplates,
   setTodayBells, clearError, clearSaveSuccess,
 } from '../ScheduleSlice.js';
 import BellSetEditor from '../components/BellSetEditor.jsx';
@@ -17,6 +17,9 @@ export default function TodayTab() {
 
   useEffect(() => {
     dispatch(fetchToday());
+    // Templates power the "Apply Template" picker in the bell editor; make sure
+    // they are available even if the Templates tab was not visited first.
+    dispatch(fetchTemplates());
   }, [dispatch]);
 
   useEffect(() => {
