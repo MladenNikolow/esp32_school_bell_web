@@ -179,7 +179,7 @@ const bg = {
   // Settings — ring duration
   'settings.ringDuration': 'Продължителност на звънене',
   'settings.ringDurationDesc': 'Колко секунди релето е активно при всяко насрочено звънене. Важи глобално за всички звънци.',
-  'settings.ringDurationSec': 'Продължителност (1–300 с)',
+  'settings.ringDurationSec': 'Продължителност (1–30 с)',
 
   // Schedule
   'schedule.bellTimetable': 'Седмично разписание',
