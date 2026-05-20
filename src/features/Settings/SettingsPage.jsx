@@ -16,6 +16,7 @@ import TokenManager from '../../utils/TokenManager.js';
 import TimezonePicker from '../Schedule/TimezonePicker.jsx';
 import useLocale from '../../hooks/useLocale.jsx';
 import FirmwareUpdatePanel from './FirmwareUpdatePanel.jsx';
+import TlsSettingsPanel from './TlsSettingsPanel.jsx';
 
 const ORDERED_DAYS = [1, 2, 3, 4, 5, 6, 0];
 
@@ -446,6 +447,9 @@ export default function SettingsPage() {
 
       {/* Firmware update (service role only) */}
       <FirmwareUpdatePanel />
+
+      {/* TLS / Certificate management */}
+      <TlsSettingsPanel />
     </div>
   );
 }

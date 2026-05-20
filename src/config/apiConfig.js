@@ -44,6 +44,11 @@ export const API_CONFIG = {
     SYSTEM_ROLLBACK: '/api/system/rollback',
     SCHEDULE_DEFAULTS: '/api/schedule/defaults',
 
+    // TLS endpoints
+    SYSTEM_TLS: '/api/system/tls',
+    SYSTEM_TLS_REGENERATE: '/api/system/tls/regenerate',
+    SYSTEM_TLS_CERTIFICATE: '/api/system/tls/certificate',
+
     // Diagnostics endpoints
     DIAGNOSTICS: '/api/diagnostics',
     DIAGNOSTICS_CLEAR: '/api/diagnostics/clear',
