@@ -4,6 +4,7 @@ import TodayTab from './subtabs/TodayTab.jsx';
 import DefaultTab from './subtabs/DefaultTab.jsx';
 import TemplatesTab from './subtabs/TemplatesTab.jsx';
 import ExceptionsTab from './subtabs/ExceptionsTab.jsx';
+import HolidayPendingBanner from './components/HolidayPendingBanner.jsx';
 
 const SUBTABS = ['today', 'default', 'templates', 'exceptions'];
 
@@ -20,6 +21,7 @@ export default function SchedulePage() {
 
   return (
     <div className="schedule-page">
+      <HolidayPendingBanner />
       <nav className="subtab-nav">
         {SUBTABS.map((id) => (
           <button
