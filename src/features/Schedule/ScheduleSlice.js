@@ -93,6 +93,10 @@ export const deleteException = createAsyncThunk(
   'schedule/deleteException',
   async (id, { signal }) => ScheduleService.deleteException(id, signal)
 );
+export const deleteAllExceptions = createAsyncThunk(
+  'schedule/deleteAllExceptions',
+  async (_, { signal }) => ScheduleService.deleteAllExceptions(signal)
+);
 export const fetchDefaults = createAsyncThunk('schedule/fetchDefaults', async (_, { signal }) => {
   try { return await ScheduleService.getDefaults(signal); } catch { return CLIENT_DEFAULTS; }
 });
@@ -215,6 +219,20 @@ const scheduleSlice = createSlice({
       .addCase(deleteException.fulfilled, (s, { meta: { arg: id } }) => {
         s.saving = false;
         delete s.exceptionDetail[id];
+      });
+
+    // Delete-all — wipe list + detail cache immediately
+    builder
+      .addCase(deleteAllExceptions.pending,   (s) => { s.saving = true;  s.error = null; })
+      .addCase(deleteAllExceptions.rejected,  (s, { error }) => { s.saving = false; s.error = error.message; })
+      .addCase(deleteAllExceptions.fulfilled, (s) => {
+        s.saving = false;
+        s.exceptions.items   = [];
+        s.exceptions.total   = 0;
+        s.exceptions.offset  = 0;
+        s.exceptions.hasMore = false;
+        s.exceptionDetail    = {};
+        s.saveSuccess        = true;
       });
     builder.addCase(fetchDefaults.fulfilled, (s, { payload }) => {
       if (payload?.bells) s.default.bells = assignIds(sortBells(payload.bells));

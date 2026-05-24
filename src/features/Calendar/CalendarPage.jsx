@@ -253,7 +253,7 @@ export default function CalendarPage() {
                     </div>
                     <div className="date-field-group date-field-label-group">
                       <label className="date-field-label">{t('calendar.label')}</label>
-                      <input className="date-label-input" value={h.label || ''} onChange={(e) => updateHoliday(i, 'label', e.target.value)} placeholder={t('calendar.holidayPlaceholder')} maxLength={47} />
+                      <input className="date-label-input" value={h.label || ''} onChange={(e) => updateHoliday(i, 'label', e.target.value)} placeholder={t('calendar.holidayPlaceholder')} maxLength={95} />
                     </div>
                   </div>
                 </div>
@@ -418,7 +418,7 @@ export default function CalendarPage() {
                       <input className="date-label-input" value={e.label || ''}
                         onChange={(ev) => updateException(i, 'label', ev.target.value)}
                         placeholder={e.action === 'day-off' ? t('calendar.exHolPlaceholder') : t('calendar.exWorkPlaceholder')}
-                        maxLength={47} />
+                        maxLength={95} />
                     </div>
                     <div className="date-field-group">
                       <label className="date-field-label">{t('calendar.action')}</label>

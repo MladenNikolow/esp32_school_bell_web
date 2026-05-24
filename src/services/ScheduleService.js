@@ -49,6 +49,34 @@ const ScheduleService = {
   /** DELETE /api/schedule/exceptions/:id */
   deleteException: (id, signal) =>
     agent.delete(`${API_CONFIG.ENDPOINTS.SCHEDULE_EXCEPTIONS}/${id}`, signal),
+  /** DELETE /api/schedule/exceptions  — clear-all */
+  deleteAllExceptions: (signal) =>
+    agent.delete(API_CONFIG.ENDPOINTS.SCHEDULE_EXCEPTIONS, signal),
+
+  // Holiday import (OpenHolidays — Bulgaria)
+
+  /** GET /api/schedule/holidays/preview?year=YYYY&lang=BG|EN
+   *  `lang` is optional; firmware defaults to BG when missing/invalid. */
+  previewHolidays: (year, lang, signal) => {
+    const qs = `year=${encodeURIComponent(year)}`
+      + (lang ? `&lang=${encodeURIComponent(lang)}` : '');
+    return agent.get(
+      `${API_CONFIG.ENDPOINTS.SCHEDULE_HOLIDAYS_PREVIEW}?${qs}`,
+      signal,
+    );
+  },
+
+  /** POST /api/schedule/holidays/apply */
+  applyHolidays: (payload, signal) =>
+    agent.post(API_CONFIG.ENDPOINTS.SCHEDULE_HOLIDAYS_APPLY, payload, signal),
+
+  /** GET /api/schedule/holidays/pending → null on 204 */
+  getPendingHolidays: (signal) =>
+    agent.get(API_CONFIG.ENDPOINTS.SCHEDULE_HOLIDAYS_PENDING, signal),
+
+  /** DELETE /api/schedule/holidays/pending */
+  dismissPendingHolidays: (signal) =>
+    agent.delete(API_CONFIG.ENDPOINTS.SCHEDULE_HOLIDAYS_PENDING, signal),
 
   // Templates
   getTemplates: (signal) =>
