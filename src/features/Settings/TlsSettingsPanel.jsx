@@ -1,10 +1,12 @@
 /**
  * TlsSettingsPanel.jsx
  *
- * Displays TLS certificate status and allows service-role admins to
- * regenerate the self-signed certificate.
+ * Displays TLS certificate status and allows service-role admins to:
+ *  • Switch web server mode (HTTP / HTTPS) and save → auto-restart
+ *  • Regenerate the self-signed certificate
+ *  • Upload a custom PEM certificate + private key
  */
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useSelector } from 'react-redux';
 import TlsService from '../../services/TlsService.js';
 import useLocale from '../../hooks/useLocale.jsx';
@@ -23,16 +25,57 @@ function daysColor(days) {
   return 'text-ok';
 }
 
+function formatDate(iso) {
+  if (!iso) return '—';
+  try {
+    return new Date(iso).toLocaleDateString(undefined, {
+      year: 'numeric', month: 'long', day: 'numeric',
+    });
+  } catch {
+    return iso;
+  }
+}
+
+function readFileAsText(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => resolve(e.target.result);
+    reader.onerror = () => reject(new Error('Failed to read file'));
+    reader.readAsText(file);
+  });
+}
+
+/* ------------------------------------------------------------------ */
 export default function TlsSettingsPanel() {
   const { t } = useLocale();
   const user = useSelector((s) => s.auth.user);
   const isService = user?.role === 'service';
 
-  const [status, setStatus] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [status, setStatus]           = useState(null);
+  const [loading, setLoading]         = useState(false);
+  const [error, setError]             = useState(null);
+  const [toast, setToast]             = useState(null);
+
+  /* Mode toggle state */
+  const [selectedMode, setSelectedMode] = useState(null); // 'http' | 'https'
+  const [savingMode, setSavingMode]     = useState(false);
+
+  /* Regenerate */
   const [regenerating, setRegenerating] = useState(false);
-  const [error, setError] = useState(null);
-  const [toast, setToast] = useState(null);
+
+  /* Upload modal */
+  const [showUpload, setShowUpload]       = useState(false);
+  const [certFile, setCertFile]           = useState(null);
+  const [keyFile, setKeyFile]             = useState(null);
+  const [uploading, setUploading]         = useState(false);
+  const [uploadError, setUploadError]     = useState(null);
+  const certInputRef = useRef(null);
+  const keyInputRef  = useRef(null);
+
+  const showToast = useCallback((msg) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 6000);
+  }, []);
 
   const loadStatus = useCallback(async (signal) => {
     setLoading(true);
@@ -40,6 +83,8 @@ export default function TlsSettingsPanel() {
     try {
       const data = await TlsService.getStatus(signal);
       setStatus(data);
+      /* Seed mode selector from persisted setting */
+      setSelectedMode(data.mode_setting || (data.enabled ? 'https' : 'http'));
     } catch (e) {
       if (e.name !== 'AbortError') setError(e.message || 'Failed to load TLS status');
     } finally {
@@ -53,17 +98,42 @@ export default function TlsSettingsPanel() {
     return () => ctrl.abort();
   }, [loadStatus]);
 
-  /* Reload on window focus so status stays fresh after a tab switch */
   useEffect(() => {
-    const onFocus = () => {
-      const ctrl = new AbortController();
-      loadStatus(ctrl.signal);
-      return () => ctrl.abort();
-    };
+    const onFocus = () => { const c = new AbortController(); loadStatus(c.signal); };
     window.addEventListener('focus', onFocus);
     return () => window.removeEventListener('focus', onFocus);
   }, [loadStatus]);
 
+  /* ---- Mode save ---- */
+  const handleSaveMode = async () => {
+    if (!selectedMode) return;
+
+    /* Switching to HTTPS but no cert → require cert first */
+    if (selectedMode === 'https' && status && !status.cert_present) {
+      setError('No certificate found. Generate or upload a certificate before enabling HTTPS.');
+      return;
+    }
+
+    if (!window.confirm(
+      `Switch server mode to ${selectedMode.toUpperCase()}? The device will restart.`
+    )) return;
+
+    setSavingMode(true);
+    setError(null);
+    try {
+      await TlsService.setMode(selectedMode);
+      showToast(`Mode set to ${selectedMode.toUpperCase()}. Device is restarting — reconnecting in 5 s…`);
+      setTimeout(() => {
+        const proto = selectedMode === 'https' ? 'https:' : 'http:';
+        window.location.assign(window.location.href.replace(/^https?:/, proto));
+      }, 5000);
+    } catch (e) {
+      setError(e.message || 'Failed to set mode');
+      setSavingMode(false);
+    }
+  };
+
+  /* ---- Regenerate ---- */
   const handleRegenerate = async () => {
     if (!window.confirm(
       'Regenerate the TLS certificate? The server will restart and you will need to accept the new certificate in your browser.'
@@ -73,36 +143,48 @@ export default function TlsSettingsPanel() {
     setError(null);
     try {
       await TlsService.regenerate();
-      setToast('Certificate regenerated. Reconnecting in 3 seconds…');
+      showToast('Certificate regenerated. Reconnecting in 4 s…');
       setTimeout(() => {
-        window.location.href = window.location.href.replace(/^https?:/, 'https:');
-      }, 3000);
+        window.location.assign(window.location.href.replace(/^https?:/, 'https:'));
+      }, 4000);
     } catch (e) {
       setError(e.message || 'Regeneration failed');
-    } finally {
       setRegenerating(false);
     }
   };
 
-  /* Formatted date for not_after */
-  function formatDate(iso) {
-    if (!iso) return '—';
-    try {
-      return new Date(iso).toLocaleDateString(undefined, {
-        year: 'numeric', month: 'long', day: 'numeric',
-      });
-    } catch {
-      return iso;
+  /* ---- Upload ---- */
+  const handleUploadSubmit = async () => {
+    if (!certFile || !keyFile) {
+      setUploadError('Please select both the certificate file and the private key file.');
+      return;
     }
-  }
+    setUploadError(null);
+    setUploading(true);
+    try {
+      const certPem = await readFileAsText(certFile);
+      const keyPem  = await readFileAsText(keyFile);
+      await TlsService.uploadCertificate(certPem, keyPem);
+      setShowUpload(false);
+      setCertFile(null); setKeyFile(null);
+      showToast('Certificate installed successfully. Reloading status…');
+      const ctrl = new AbortController();
+      loadStatus(ctrl.signal);
+    } catch (e) {
+      setUploadError(e.message || 'Upload failed');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const modeChanged = selectedMode !== (status?.mode_setting ?? (status?.enabled ? 'https' : 'http'));
 
   return (
     <div className="sched-card">
-      <h3>Security — TLS Certificate</h3>
+      <h3>Security — TLS / HTTPS</h3>
       <p className="card-desc">
-        The device uses a self-signed ECDSA P-256 certificate for HTTPS.
-        Physical access to the device gives access to the TLS private key;
-        treat the physical security of the enclosure as part of the security model.
+        The device can serve its web interface over HTTPS (port 443) with a TLS certificate,
+        or over plain HTTP (port 80). HTTPS requires a valid certificate to be present.
       </p>
 
       {error && (
@@ -116,7 +198,6 @@ export default function TlsSettingsPanel() {
         <div className="success-message" style={{ marginBottom: 8 }}>{toast}</div>
       )}
 
-      {/* Tamper warning */}
       {status?.tamper_suspected && (
         <div className="error-message" style={{ marginBottom: 12 }}>
           ⚠ Certificate changed unexpectedly — verify device physical security and regenerate.
@@ -125,51 +206,103 @@ export default function TlsSettingsPanel() {
 
       {loading && !status && <p>Loading…</p>}
 
-      {status && (
-        <div className="info-grid">
-          <div className="info-item">
-            <span className="info-label">Status</span>
-            <span className="info-value">
-              <span className="badge" style={{ background: status.enabled ? '#3a8a3a' : '#888' }}>
-                {status.enabled ? 'HTTPS Active' : 'Disabled'}
+      {/* ---- Mode selector (service only) ---- */}
+      {isService && status && (
+        <div style={{ marginBottom: 20 }}>
+          <div className="form-group">
+            <label className="form-label">Web Server Mode</label>
+            <div style={{ display: 'flex', gap: 16, alignItems: 'center', marginTop: 6 }}>
+              {['http', 'https'].map((m) => (
+                <label key={m} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+                  <input
+                    type="radio"
+                    name="web_mode"
+                    value={m}
+                    checked={selectedMode === m}
+                    onChange={() => setSelectedMode(m)}
+                    disabled={savingMode}
+                  />
+                  <span style={{ textTransform: 'uppercase', fontWeight: 600 }}>{m}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {selectedMode === 'https' && !status.cert_present && (
+            <div className="error-message" style={{ margin: '6px 0 8px' }}>
+              No certificate present. Generate or upload one below before saving HTTPS mode.
+            </div>
+          )}
+
+          <div style={{ marginTop: 10 }}>
+            <button
+              className={`save-button${savingMode ? ' loading' : ''}`}
+              onClick={handleSaveMode}
+              disabled={!modeChanged || savingMode || loading ||
+                        (selectedMode === 'https' && !status.cert_present)}
+            >
+              {savingMode ? 'Saving…' : 'Save Mode'}
+            </button>
+            {modeChanged && !savingMode && (
+              <span style={{ marginLeft: 10, fontSize: '0.85em', opacity: 0.7 }}>
+                (unsaved — device will restart on save)
               </span>
-            </span>
-          </div>
-          <div className="info-item">
-            <span className="info-label">Source</span>
-            <span className="info-value" style={{ textTransform: 'capitalize' }}>{status.source || '—'}</span>
-          </div>
-          <div className="info-item">
-            <span className="info-label">Port</span>
-            <span className="info-value">{status.port || '—'}</span>
-          </div>
-          <div className="info-item">
-            <span className="info-label">Subject CN</span>
-            <span className="info-value" style={{ fontFamily: 'monospace', fontSize: '0.85em' }}>
-              {status.subject_cn || '—'}
-            </span>
-          </div>
-          <div className="info-item">
-            <span className="info-label">Fingerprint (SHA-256)</span>
-            <span className="info-value" style={{ fontFamily: 'monospace', fontSize: '0.8em' }}
-                  title={status.fingerprint_sha256}>
-              {truncateFp(status.fingerprint_sha256)}
-            </span>
-          </div>
-          <div className="info-item">
-            <span className="info-label">Valid Until</span>
-            <span className={`info-value ${daysColor(status.days_remaining)}`}>
-              {formatDate(status.not_after)}
-              {status.days_remaining != null && (
-                <span style={{ marginLeft: 6, fontSize: '0.85em' }}>
-                  ({status.days_remaining} days remaining)
-                </span>
-              )}
-            </span>
+            )}
           </div>
         </div>
       )}
 
+      {/* ---- Cert status grid ---- */}
+      {status && (
+        <div className="info-grid">
+          <div className="info-item">
+            <span className="info-label">Active Mode</span>
+            <span className="info-value">
+              <span className="badge" style={{ background: status.mode_active === 'https' ? '#3a8a3a' : '#888' }}>
+                {(status.mode_active || (status.enabled ? 'https' : 'http')).toUpperCase()}
+              </span>
+            </span>
+          </div>
+          <div className="info-item">
+            <span className="info-label">Certificate Present</span>
+            <span className="info-value">{status.cert_present ? 'Yes' : 'No'}</span>
+          </div>
+          {status.cert_present && (
+            <>
+              <div className="info-item">
+                <span className="info-label">Source</span>
+                <span className="info-value" style={{ textTransform: 'capitalize' }}>{status.source || '—'}</span>
+              </div>
+              <div className="info-item">
+                <span className="info-label">Subject CN</span>
+                <span className="info-value" style={{ fontFamily: 'monospace', fontSize: '0.85em' }}>
+                  {status.subject_cn || '—'}
+                </span>
+              </div>
+              <div className="info-item">
+                <span className="info-label">Fingerprint (SHA-256)</span>
+                <span className="info-value" style={{ fontFamily: 'monospace', fontSize: '0.8em' }}
+                      title={status.fingerprint_sha256}>
+                  {truncateFp(status.fingerprint_sha256)}
+                </span>
+              </div>
+              <div className="info-item">
+                <span className="info-label">Valid Until</span>
+                <span className={`info-value ${daysColor(status.days_remaining)}`}>
+                  {formatDate(status.not_after)}
+                  {status.days_remaining != null && (
+                    <span style={{ marginLeft: 6, fontSize: '0.85em' }}>
+                      ({status.days_remaining} days remaining)
+                    </span>
+                  )}
+                </span>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ---- Cert actions (service only) ---- */}
       {isService && (
         <div style={{ marginTop: 16, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <button
@@ -182,12 +315,79 @@ export default function TlsSettingsPanel() {
 
           <button
             className="save-button"
-            disabled
-            title="Custom certificate upload — coming in Phase 2"
-            style={{ opacity: 0.5, cursor: 'not-allowed' }}
+            onClick={() => { setShowUpload(true); setUploadError(null); setCertFile(null); setKeyFile(null); }}
+            disabled={regenerating || loading}
+            style={{ background: '#4a7abf' }}
           >
             Upload Custom Certificate
           </button>
+        </div>
+      )}
+
+      {/* ---- Upload modal ---- */}
+      {showUpload && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
+          }}
+          onClick={(e) => { if (e.target === e.currentTarget && !uploading) setShowUpload(false); }}
+        >
+          <div style={{
+            background: 'var(--card-bg, #1e1e1e)', borderRadius: 8,
+            padding: 24, maxWidth: 460, width: '90%', boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
+          }}>
+            <h4 style={{ marginTop: 0 }}>Upload Custom Certificate</h4>
+            <p style={{ fontSize: '0.85em', opacity: 0.7 }}>
+              Upload a PEM-encoded certificate and matching private key (each ≤ 6 KB).
+              The existing certificate will be <strong>permanently replaced</strong>.
+            </p>
+
+            {uploadError && (
+              <div className="error-message" style={{ marginBottom: 10 }}>{uploadError}</div>
+            )}
+
+            <div className="form-group">
+              <label className="form-label">Certificate (cert.pem)</label>
+              <input
+                type="file"
+                ref={certInputRef}
+                accept=".pem,.crt,.cer"
+                onChange={(e) => setCertFile(e.target.files[0] || null)}
+                disabled={uploading}
+                style={{ display: 'block', marginTop: 4 }}
+              />
+            </div>
+            <div className="form-group" style={{ marginTop: 12 }}>
+              <label className="form-label">Private Key (key.pem)</label>
+              <input
+                type="file"
+                ref={keyInputRef}
+                accept=".pem,.key"
+                onChange={(e) => setKeyFile(e.target.files[0] || null)}
+                disabled={uploading}
+                style={{ display: 'block', marginTop: 4 }}
+              />
+            </div>
+
+            <div style={{ marginTop: 18, display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button
+                className="save-button"
+                style={{ background: '#555' }}
+                onClick={() => setShowUpload(false)}
+                disabled={uploading}
+              >
+                Cancel
+              </button>
+              <button
+                className={`save-button${uploading ? ' loading' : ''}`}
+                onClick={handleUploadSubmit}
+                disabled={uploading || !certFile || !keyFile}
+              >
+                {uploading ? 'Uploading…' : 'Install Certificate'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
