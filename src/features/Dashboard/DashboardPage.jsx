@@ -18,13 +18,9 @@ export default function DashboardPage() {
   const ringDurationSec = useSelector((s) => s.schedule.ringDurationSec);
   const { t } = useLocale();
   const [confirmPanic, setConfirmPanic] = useState(false);
-  const [testDuration, setTestDuration] = useState(ringDurationSec || 3);
   const [bellFeedback, setBellFeedback] = useState(null);
   const { testingBell } = useSelector((s) => s.settings);
   const intervalRef = useRef(null);
-
-  // Sync testDuration when global ringDurationSec is loaded from settings
-  useEffect(() => { if (ringDurationSec) setTestDuration(ringDurationSec); }, [ringDurationSec]);
 
   const refresh = useCallback(() => {
     dispatch(fetchBellStatus());
@@ -95,7 +91,6 @@ export default function DashboardPage() {
           {nextBell ? (
             <div className="next-bell-info">
               <div className="next-bell-time">{nextBell.time}</div>
-              <div className="next-bell-duration">{t('dashboard.ringDuration', { duration: nextBell.durationSec })}</div>
             </div>
           ) : (
             <div className="next-bell-none">{t('dashboard.noUpcoming')}</div>
@@ -107,25 +102,14 @@ export default function DashboardPage() {
       <div className="dash-card activate-bell-card">
         <h3>{t('dashboard.activateBell')}</h3>
         <p className="panic-desc">{t('dashboard.activateBellDesc')}</p>
-        <div className="test-duration-control" style={{ marginBottom: 12 }}>
-          <label className="form-label" style={{ margin: 0, fontSize: 13 }}>{t('dashboard.testDuration')}</label>
-          <input
-            type="range"
-            className="duration-slider"
-            min="1"
-            max="30"
-            value={testDuration}
-            onChange={(e) => setTestDuration(parseInt(e.target.value))}
-          />
-          <span className="test-duration-value">{testDuration}s</span>
-        </div>
         <button
           className={`save-button test-bell-btn${testingBell ? ' loading' : ''}`}
           onClick={() => {
+            const duration = ringDurationSec || 3;
             setBellFeedback(null);
-            dispatch(testBell(testDuration)).then((result) => {
+            dispatch(testBell(duration)).then((result) => {
               if (result.meta.requestStatus === 'fulfilled') {
-                setTimeout(() => dispatch(fetchBellStatus()), (testDuration * 1000) + 500);
+                setTimeout(() => dispatch(fetchBellStatus()), (duration * 1000) + 500);
               } else {
                 setBellFeedback('error');
                 setTimeout(() => setBellFeedback(null), 4000);

@@ -73,7 +73,6 @@ const bg = {
   // Dashboard
   'dashboard.bellStatus': 'Състояние на звънеца',
   'dashboard.nextBell': 'Следващ звънец',
-  'dashboard.ringDuration': 'Продължителност: {duration}с',
   'dashboard.noUpcoming': 'Няма предстоящи звънци',
   'dashboard.panicMode': 'Авариен режим',
   'dashboard.panicActive': 'Звънецът звъни непрекъснато. Натиснете за спиране.',
@@ -89,7 +88,6 @@ const bg = {
   'dashboard.bellRinging': 'Звъни...',
   'dashboard.bellActivated': 'Звънецът е активиран успешно!',
   'dashboard.bellError': 'Грешка при активиране на звънеца. Опитайте отново.',
-  'dashboard.testDuration': 'Продължителност',
 
   // Day types
   'dayType.off': 'Уикенд',

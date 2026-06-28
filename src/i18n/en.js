@@ -89,7 +89,6 @@ const en = {
   'dashboard.bellRinging': 'Ringing...',
   'dashboard.bellActivated': 'Bell activated successfully!',
   'dashboard.bellError': 'Failed to activate bell. Please try again.',
-  'dashboard.testDuration': 'Duration',
 
   // Day types
   'dayType.off': 'Weekend',
