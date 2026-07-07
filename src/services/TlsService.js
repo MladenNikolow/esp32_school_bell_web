@@ -1,5 +1,5 @@
 import HttpRequestAgent from '../utils/HttpRequestAgent.js';
-import { API_CONFIG } from '../config/apiConfig.js';
+import { API_CONFIG, getApiUrl } from '../config/apiConfig.js';
 
 const agent = HttpRequestAgent;
 
@@ -26,6 +26,28 @@ const TlsService = {
 
   uploadCertificate: (certPem, keyPem, signal) =>
     agent.post(API_CONFIG.ENDPOINTS.SYSTEM_TLS_CERTIFICATE, { cert_pem: certPem, key_pem: keyPem }, signal),
+
+  /**
+   * Download the PUBLIC server certificate (.crt) and trigger a browser
+   * download. Uses the HttpOnly session cookie for auth (credentials:include).
+   */
+  downloadCertificate: async () => {
+    const res = await fetch(getApiUrl(API_CONFIG.ENDPOINTS.SYSTEM_TLS_DOWNLOAD), {
+      method: 'GET',
+      credentials: 'include',
+      headers: { 'X-Requested-With': 'XMLHttpRequest' },
+    });
+    if (!res.ok) throw new Error('Failed to download certificate');
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'ringy-cert.crt';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  },
 };
 
 export default TlsService;

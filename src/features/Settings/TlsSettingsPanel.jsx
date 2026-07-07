@@ -63,6 +63,9 @@ export default function TlsSettingsPanel() {
   /* Regenerate */
   const [regenerating, setRegenerating] = useState(false);
 
+  /* Download certificate */
+  const [downloading, setDownloading] = useState(false);
+
   /* Upload modal */
   const [showUpload, setShowUpload]       = useState(false);
   const [certFile, setCertFile]           = useState(null);
@@ -143,13 +146,26 @@ export default function TlsSettingsPanel() {
     setError(null);
     try {
       await TlsService.regenerate();
-      showToast('Certificate regenerated. Reconnecting in 4 s…');
+      showToast('Certificate regenerated. Device is restarting — reconnecting in 8 s…');
       setTimeout(() => {
         window.location.assign(window.location.href.replace(/^https?:/, 'https:'));
-      }, 4000);
+      }, 8000);
     } catch (e) {
       setError(e.message || 'Regeneration failed');
       setRegenerating(false);
+    }
+  };
+
+  /* ---- Download certificate ---- */
+  const handleDownloadCert = async () => {
+    setDownloading(true);
+    setError(null);
+    try {
+      await TlsService.downloadCertificate();
+    } catch (e) {
+      setError(e.message || 'Failed to download certificate');
+    } finally {
+      setDownloading(false);
     }
   };
 
@@ -167,9 +183,10 @@ export default function TlsSettingsPanel() {
       await TlsService.uploadCertificate(certPem, keyPem);
       setShowUpload(false);
       setCertFile(null); setKeyFile(null);
-      showToast('Certificate installed successfully. Reloading status…');
-      const ctrl = new AbortController();
-      loadStatus(ctrl.signal);
+      showToast('Certificate installed. Device is restarting — reconnecting in 8 s…');
+      setTimeout(() => {
+        window.location.assign(window.location.href.replace(/^https?:/, 'https:'));
+      }, 8000);
     } catch (e) {
       setUploadError(e.message || 'Upload failed');
     } finally {
@@ -299,6 +316,25 @@ export default function TlsSettingsPanel() {
               </div>
             </>
           )}
+        </div>
+      )}
+
+      {/* ---- Download certificate (any authenticated user) ---- */}
+      {status?.cert_present && (
+        <div style={{ marginTop: 16 }}>
+          <button
+            className={`save-button${downloading ? ' loading' : ''}`}
+            onClick={handleDownloadCert}
+            disabled={downloading || loading}
+            style={{ background: '#3a8a6a' }}
+          >
+            {downloading ? 'Downloading…' : 'Download Certificate'}
+          </button>
+          <p className="card-desc" style={{ marginTop: 6 }}>
+            Download the device certificate (.crt) and install it as a trusted
+            certificate on your computer or phone to remove browser security
+            warnings. See the TLS Certificate Guide for per-device steps.
+          </p>
         </div>
       )}
 

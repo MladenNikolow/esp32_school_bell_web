@@ -51,6 +51,7 @@ export const API_CONFIG = {
     SYSTEM_TLS: '/api/system/tls',
     SYSTEM_TLS_REGENERATE: '/api/system/tls/regenerate',
     SYSTEM_TLS_CERTIFICATE: '/api/system/tls/certificate',
+    SYSTEM_TLS_DOWNLOAD: '/api/system/tls/download',
     SYSTEM_TLS_MODE: '/api/system/tls/mode',
 
     // Diagnostics endpoints
