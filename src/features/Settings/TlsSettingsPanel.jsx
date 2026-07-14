@@ -139,17 +139,26 @@ export default function TlsSettingsPanel() {
   /* ---- Regenerate ---- */
   const handleRegenerate = async () => {
     if (!window.confirm(
-      'Regenerate the TLS certificate? The server will restart and you will need to accept the new certificate in your browser.'
+      'Regenerate the TLS certificate? A new self-signed certificate will be created.'
     )) return;
 
     setRegenerating(true);
     setError(null);
     try {
-      await TlsService.regenerate();
-      showToast('Certificate regenerated. Device is restarting — reconnecting in 8 s…');
-      setTimeout(() => {
-        window.location.assign(window.location.href.replace(/^https?:/, 'https:'));
-      }, 8000);
+      const res = await TlsService.regenerate();
+      const needRestart = res?.restart_required === true;
+
+      if (needRestart) {
+        showToast('Certificate regenerated. Device is restarting — reconnecting in 8 s…');
+        setTimeout(() => {
+          window.location.assign(window.location.href.replace(/^https?:/, 'https:'));
+        }, 8000);
+      } else {
+        showToast('Certificate regenerated and stored. Switch to HTTPS mode to apply it.');
+        /* No restart in HTTP mode — just refresh the cert metadata in place. */
+        await loadStatus();
+        setRegenerating(false);
+      }
     } catch (e) {
       setError(e.message || 'Regeneration failed');
       setRegenerating(false);
@@ -180,13 +189,23 @@ export default function TlsSettingsPanel() {
     try {
       const certPem = await readFileAsText(certFile);
       const keyPem  = await readFileAsText(keyFile);
-      await TlsService.uploadCertificate(certPem, keyPem);
+      const res = await TlsService.uploadCertificate(certPem, keyPem);
+      const needRestart = res?.restart_required === true;
+
       setShowUpload(false);
       setCertFile(null); setKeyFile(null);
-      showToast('Certificate installed. Device is restarting — reconnecting in 8 s…');
-      setTimeout(() => {
-        window.location.assign(window.location.href.replace(/^https?:/, 'https:'));
-      }, 8000);
+
+      if (needRestart) {
+        showToast('Certificate installed. Device is restarting — reconnecting in 8 s…');
+        setTimeout(() => {
+          window.location.assign(window.location.href.replace(/^https?:/, 'https:'));
+        }, 8000);
+      } else {
+        showToast('Certificate installed and stored. Switch to HTTPS mode to apply it.');
+        /* No restart in HTTP mode — refresh the cert metadata in place. */
+        await loadStatus();
+        setUploading(false);
+      }
     } catch (e) {
       setUploadError(e.message || 'Upload failed');
     } finally {
