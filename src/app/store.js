@@ -5,7 +5,6 @@ import authReducer from '../features/Auth/AuthSlice'
 import dashboardReducer from '../features/Dashboard/DashboardSlice.js'
 import scheduleReducer from '../features/Schedule/ScheduleSlice.js'
 import settingsReducer from '../features/Settings/SettingsSlice.js'
-import diagnosticsReducer from '../features/Diagnostics/DiagnosticsSlice.js'
 import { authMiddleware, tokenValidationMiddleware } from '../middleware/authMiddleware.js';
 
 export const store = configureStore({
@@ -15,7 +14,6 @@ export const store = configureStore({
     dashboard: dashboardReducer,
     schedule: scheduleReducer,
     settings: settingsReducer,
-    diagnostics: diagnosticsReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

@@ -7,8 +7,6 @@ import Navigation from '../../Navigation/Navigation.jsx';
 import DashboardPage from '../../Dashboard/DashboardPage.jsx';
 import SchedulePage from '../../Schedule/SchedulePage.jsx';
 import SettingsPage from '../../Settings/SettingsPage.jsx';
-import DiagnosticsPage from '../../Diagnostics/DiagnosticsPage.jsx';
-import { fetchDiagnostics } from '../../Diagnostics/DiagnosticsSlice.js';
 import RingyLogo from '../../../components/RingyLogo.jsx';
 import useTheme from '../../../hooks/useTheme.js';
 import useLocale from '../../../hooks/useLocale.jsx';
@@ -17,7 +15,6 @@ const PAGES = {
   dashboard: DashboardPage,
   schedule: SchedulePage,
   settings: SettingsPage,
-  diagnostics: DiagnosticsPage,
 };
 
 /**
@@ -29,7 +26,7 @@ export default function AuthGuard() {
   const { isAuthenticated, isInitializing, user } = useSelector((state) => state.auth);
   const [activeTab, setActiveTab] = useState('dashboard');
   const { theme, toggleTheme } = useTheme();
-  const { t, locale, setLocale, toggleLocale } = useLocale();
+  const { t, locale, setLocale } = useLocale();
 
   // Initialize authentication on component mount
   useEffect(() => {
@@ -63,7 +60,6 @@ export default function AuthGuard() {
           <RingyLogo height="48px" onClick={() => setActiveTab('dashboard')} />
           <div className="user-info">
             {user && <span className="welcome-text">{t('auth.welcome', { name: user.username || 'Admin' })}</span>}
-            <HeaderHealthDot onClick={() => setActiveTab('diagnostics')} title={t('diag.openTitle')} />
             <div className="header-toggles">
               <div className="lang-switcher" role="radiogroup" aria-label={t('lang.title')}>
                 <button
@@ -92,36 +88,5 @@ export default function AuthGuard() {
         <ActivePage />
       </main>
     </div>
-  );
-}
-
-/**
- * Small clickable health dot in the header. Polls /api/diagnostics
- * (lightly) via the Redux slice and shows a colored indicator:
- *   green  = healthy
- *   orange = degraded
- *   red    = critical
- * Hidden if no data is available yet.
- */
-function HeaderHealthDot({ onClick, title }) {
-  const dispatch = useDispatch();
-  const health = useSelector((s) => s.diagnostics?.health);
-
-  useEffect(() => {
-    dispatch(fetchDiagnostics());
-    const id = setInterval(() => dispatch(fetchDiagnostics()), 30000);
-    return () => clearInterval(id);
-  }, [dispatch]);
-
-  if (!health) return null;
-  const cls = health.critical ? 'critical' : health.degraded ? 'degraded' : 'ok';
-  return (
-    <button
-      type="button"
-      className={`header-health-dot ${cls}`}
-      onClick={onClick}
-      title={title}
-      aria-label={title}
-    />
   );
 }

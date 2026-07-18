@@ -78,10 +78,6 @@ src/
 │   │   └── components/
 │   │       └── WiFiConfigPage.jsx   Setup wizard (shown when no WiFi credentials on device)
 │   │
-│   ├── Diagnostics/
-│   │   ├── DiagnosticsPage.jsx      Health badge, subsystem tiles, recent events, clear-log modal (polls /api/diagnostics every 10s)
-│   │   └── DiagnosticsSlice.js      diagnostics slice — fetchDiagnostics, clearDiagnostics thunks
-│   │
 │   ├── Calendar/                    DEAD CODE — removed from store and navigation in Phase 5
 │   │   ├── CalendarPage.jsx
 │   │   └── CalendarSlice.js
@@ -107,7 +103,6 @@ src/
 │   ├── ScheduleService.js           getSettings/saveSettings, getToday/saveToday,
 │   │                                getDefault/saveDefault, getTemplates/saveTemplates,
 │   │                                getExceptions/saveExceptions, getDefaults
-│   ├── DiagnosticsService.js        get() (health + events snapshot), clear() (service role only)
 │   └── __tests__/
 │       └── AuthService.test.js
 │

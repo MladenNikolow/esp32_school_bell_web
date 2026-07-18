@@ -1,7 +1,7 @@
 import React from 'react';
 import useLocale from '../../hooks/useLocale.jsx';
 
-const TAB_IDS = ['dashboard', 'schedule', 'settings', 'diagnostics'];
+const TAB_IDS = ['dashboard', 'schedule', 'settings'];
 
 export default function Navigation({ activeTab, onTabChange }) {
   const { t } = useLocale();
