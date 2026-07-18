@@ -30,6 +30,7 @@ const dashboardSlice = createSlice({
     nextBell: null,
     timezone: '',
     error: null,
+    loadedAt: 0,
   },
   reducers: {
     clearError: (state) => { state.error = null; },
@@ -37,6 +38,7 @@ const dashboardSlice = createSlice({
   extraReducers: (builder) => {
     builder
       .addCase(fetchBellStatus.fulfilled, (state, { payload }) => {
+        state.loadedAt = Date.now();
         state.error = null;
         state.bellState = payload.bellState;
         state.panicMode = payload.panicMode;

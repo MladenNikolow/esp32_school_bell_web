@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import {
-  fetchTemplates, saveTemplates,
+  saveTemplates,
   clearError, clearSaveSuccess,
 } from '../ScheduleSlice.js';
 import BellSetEditor from '../components/BellSetEditor.jsx';
@@ -17,10 +17,6 @@ export default function TemplatesTab() {
 
   const [local, setLocal] = useState([null, null, null]);
   const [open, setOpen] = useState([false, false, false]);
-
-  useEffect(() => {
-    dispatch(fetchTemplates());
-  }, [dispatch]);
 
   useEffect(() => {
     const arr = Array.from({ length: SLOT_COUNT }, (_, i) => storeTemplates[i] ?? null);

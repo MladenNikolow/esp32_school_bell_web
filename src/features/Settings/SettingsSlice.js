@@ -4,6 +4,33 @@ import CredentialService from '../../services/CredentialService.js';
 import httpRequestAgent from '../../utils/HttpRequestAgent.js';
 import { API_CONFIG } from '../../config/apiConfig.js';
 
+export const fetchSettingsCore = createAsyncThunk(
+  'settings/fetchSettingsCore',
+  async (_, { signal }) => httpRequestAgent.get(
+    API_CONFIG.ENDPOINTS.UI_SETTINGS_CORE,
+    { signal, priority: 'visible' },
+  ),
+  { condition: (arg, { getState }) => arg?.force || Date.now() - getState().settings.resources.core.loadedAt >= 60000 },
+);
+
+export const fetchSettingsAccess = createAsyncThunk(
+  'settings/fetchSettingsAccess',
+  async (_, { signal }) => httpRequestAgent.get(
+    API_CONFIG.ENDPOINTS.UI_SETTINGS_ACCESS,
+    { signal, priority: 'supporting' },
+  ),
+  { condition: (arg, { getState }) => arg?.force || Date.now() - getState().settings.resources.access.loadedAt >= 60000 },
+);
+
+export const fetchSettingsMaintenance = createAsyncThunk(
+  'settings/fetchSettingsMaintenance',
+  async (_, { signal }) => httpRequestAgent.get(
+    API_CONFIG.ENDPOINTS.UI_SETTINGS_MAINTENANCE,
+    { signal, priority: 'supporting' },
+  ),
+  { condition: (arg, { getState }) => arg?.force || Date.now() - getState().settings.resources.maintenance.loadedAt >= 60000 },
+);
+
 export const fetchSystemInfo = createAsyncThunk(
   'settings/fetchSystemInfo',
   async (_, { signal }) => ScheduleService.getSystemInfo(signal)
@@ -92,6 +119,13 @@ const settingsSlice = createSlice({
     credentialsLoading: false,
     credentialsSaving: false,
     credentialsDeleting: false,
+    firmwareInfo: null,
+    tlsStatus: null,
+    resources: {
+      core: { status: 'idle', loadedAt: 0, error: null },
+      access: { status: 'idle', loadedAt: 0, error: null },
+      maintenance: { status: 'idle', loadedAt: 0, error: null },
+    },
   },
   reducers: {
     clearError: (state) => { state.error = null; },
@@ -99,6 +133,53 @@ const settingsSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
+      .addCase(fetchSettingsCore.pending, (state) => {
+        state.resources.core.status = 'loading';
+        state.resources.core.error = null;
+      })
+      .addCase(fetchSettingsCore.fulfilled, (state, { payload }) => {
+        state.resources.core = { status: 'ready', loadedAt: Date.now(), error: null };
+        state.systemInfo = payload.systemInfo ?? state.systemInfo;
+      })
+      .addCase(fetchSettingsCore.rejected, (state, { error }) => {
+        state.resources.core.status = 'error';
+        state.resources.core.error = error.message;
+        if (error.name !== 'AbortError') state.error = error.message;
+      })
+      .addCase(fetchSettingsAccess.pending, (state) => {
+        state.resources.access.status = 'loading';
+        state.resources.access.error = null;
+        state.pinLoading = true;
+        state.credentialsLoading = true;
+      })
+      .addCase(fetchSettingsAccess.fulfilled, (state, { payload }) => {
+        state.resources.access = { status: 'ready', loadedAt: Date.now(), error: null };
+        state.pinLoading = false;
+        state.credentialsLoading = false;
+        state.currentPin = payload.pin ?? state.currentPin;
+        state.clientCredentials = payload.credentials;
+      })
+      .addCase(fetchSettingsAccess.rejected, (state, { error }) => {
+        state.resources.access.status = 'error';
+        state.resources.access.error = error.message;
+        state.pinLoading = false;
+        state.credentialsLoading = false;
+        if (error.name !== 'AbortError') state.error = error.message;
+      })
+      .addCase(fetchSettingsMaintenance.pending, (state) => {
+        state.resources.maintenance.status = 'loading';
+        state.resources.maintenance.error = null;
+      })
+      .addCase(fetchSettingsMaintenance.fulfilled, (state, { payload }) => {
+        state.resources.maintenance = { status: 'ready', loadedAt: Date.now(), error: null };
+        state.firmwareInfo = payload.firmware ?? null;
+        state.tlsStatus = payload.tls ?? null;
+      })
+      .addCase(fetchSettingsMaintenance.rejected, (state, { error }) => {
+        state.resources.maintenance.status = 'error';
+        state.resources.maintenance.error = error.message;
+        if (error.name !== 'AbortError') state.error = error.message;
+      })
       .addCase(fetchSystemInfo.pending, (state) => { state.loading = true; })
       .addCase(fetchSystemInfo.fulfilled, (state, { payload }) => {
         state.loading = false;
@@ -154,8 +235,10 @@ const settingsSlice = createSlice({
         if (error.name !== 'AbortError') state.error = error.message;
       })
       .addCase(savePin.pending, (state) => { state.pinSaving = true; })
-      .addCase(savePin.fulfilled, (state) => {
+      .addCase(savePin.fulfilled, (state, { payload, meta }) => {
         state.pinSaving = false;
+        state.currentPin = payload?.pin ?? meta.arg;
+        state.resources.access.loadedAt = Date.now();
         state.actionSuccess = 'PIN updated successfully';
       })
       .addCase(savePin.rejected, (state, { error }) => {
@@ -176,8 +259,13 @@ const settingsSlice = createSlice({
       .addCase(saveCredentials.pending, (state) => {
         state.credentialsSaving = true;
       })
-      .addCase(saveCredentials.fulfilled, (state) => {
+      .addCase(saveCredentials.fulfilled, (state, { payload, meta }) => {
         state.credentialsSaving = false;
+        state.clientCredentials = payload?.credentials ?? {
+          clientExists: true,
+          clientUsername: payload?.clientUsername ?? meta.arg.username,
+        };
+        state.resources.access.loadedAt = Date.now();
         state.actionSuccess = 'Client account saved';
       })
       .addCase(saveCredentials.rejected, (state, action) => {

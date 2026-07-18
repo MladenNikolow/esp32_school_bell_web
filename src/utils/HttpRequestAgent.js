@@ -19,9 +19,12 @@ class HttpRequestAgent {
    * @param {AbortSignal} [signal] - Abort signal for cancellation
    * @returns {Promise<any>} Parsed JSON response
    */
-  async get(endpoint, signal = null) {
+  async get(endpoint, signalOrOptions = null) {
     try {
-      const response = await this.httpClient.get(endpoint, { signal });
+      const options = typeof AbortSignal !== 'undefined' && signalOrOptions instanceof AbortSignal
+        ? { signal: signalOrOptions }
+        : (signalOrOptions || {});
+      const response = await this.httpClient.get(endpoint, options);
       return this._parseResponse(response);
     } catch (error) {
       if (error.name === 'AbortError') {
@@ -38,9 +41,12 @@ class HttpRequestAgent {
    * @param {AbortSignal} [signal] - Abort signal for cancellation
    * @returns {Promise<any>} Parsed JSON response
    */
-  async post(endpoint, data, signal = null) {
+  async post(endpoint, data, signalOrOptions = null) {
     try {
-      const response = await this.httpClient.post(endpoint, data, { signal });
+      const options = typeof AbortSignal !== 'undefined' && signalOrOptions instanceof AbortSignal
+        ? { signal: signalOrOptions }
+        : (signalOrOptions || {});
+      const response = await this.httpClient.post(endpoint, data, options);
       return this._parseResponse(response);
     } catch (error) {
       if (error.name === 'AbortError') {
@@ -50,9 +56,12 @@ class HttpRequestAgent {
     }
   }
 
-  async put(endpoint, data, signal = null) {
+  async put(endpoint, data, signalOrOptions = null) {
     try {
-      const response = await this.httpClient.put(endpoint, data, { signal });
+      const options = typeof AbortSignal !== 'undefined' && signalOrOptions instanceof AbortSignal
+        ? { signal: signalOrOptions }
+        : (signalOrOptions || {});
+      const response = await this.httpClient.put(endpoint, data, options);
       return this._parseResponse(response);
     } catch (error) {
       if (error.name === 'AbortError') throw error;
@@ -60,9 +69,12 @@ class HttpRequestAgent {
     }
   }
 
-  async delete(endpoint, signal = null) {
+  async delete(endpoint, signalOrOptions = null) {
     try {
-      const response = await this.httpClient.delete(endpoint, { signal });
+      const options = typeof AbortSignal !== 'undefined' && signalOrOptions instanceof AbortSignal
+        ? { signal: signalOrOptions }
+        : (signalOrOptions || {});
+      const response = await this.httpClient.delete(endpoint, options);
       return this._parseResponse(response);
     } catch (error) {
       if (error.name === 'AbortError') throw error;

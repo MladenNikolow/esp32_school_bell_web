@@ -72,7 +72,10 @@ const ScheduleService = {
 
   /** GET /api/schedule/holidays/pending → null on 204 */
   getPendingHolidays: (signal) =>
-    agent.get(API_CONFIG.ENDPOINTS.SCHEDULE_HOLIDAYS_PENDING, signal),
+    agent.get(API_CONFIG.ENDPOINTS.SCHEDULE_HOLIDAYS_PENDING, {
+      signal,
+      priority: 'background',
+    }),
 
   /** DELETE /api/schedule/holidays/pending */
   dismissPendingHolidays: (signal) =>

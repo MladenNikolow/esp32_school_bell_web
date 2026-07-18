@@ -5,6 +5,7 @@
 // application/octet-stream and report upload progress through XHR.
 import httpRequestAgent from '../utils/HttpRequestAgent.js';
 import HttpDiagnostics from '../utils/HttpDiagnostics.js';
+import RequestScheduler from '../utils/RequestScheduler.js';
 import { API_CONFIG } from '../config/apiConfig.js';
 
 const FirmwareService = {
@@ -44,7 +45,7 @@ const FirmwareService = {
    * @returns {Promise<{ success: boolean, reboot_in_ms: number }>}
    */
   uploadBundle(file, onProgress) {
-    return new Promise((resolve, reject) => {
+    return RequestScheduler.schedule(() => new Promise((resolve, reject) => {
       const diagnostic = HttpDiagnostics.start(
         'POST',
         API_CONFIG.ENDPOINTS.SYSTEM_UPDATE,
@@ -112,7 +113,7 @@ const FirmwareService = {
       };
 
       xhr.send(file);
-    });
+    }), { priority: 'critical', exclusive: true });
   },
 };
 

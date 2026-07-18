@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useSelector } from 'react-redux';
 import FirmwareService from '../../services/FirmwareService.js';
+import HttpClient from '../../utils/HttpClient.js';
 import useLocale from '../../hooks/useLocale.jsx';
 
 /* ------------------------------------------------------------------------- */
@@ -96,7 +97,7 @@ async function preflightBundle(file) {
 /* The rollback action is intentionally NOT exposed in the UI — the           */
 /* bootloader handles automatic rollback when a new firmware fails to start.  */
 /* ------------------------------------------------------------------------- */
-export default function FirmwareUpdatePanel() {
+export default function FirmwareUpdatePanel({ initialInfo = null, autoLoad = true, loadInfo = null }) {
   const { t } = useLocale();
   const user = useSelector((s) => s.auth.user);
   const isService = user?.role === 'service';
@@ -115,15 +116,24 @@ export default function FirmwareUpdatePanel() {
     setLoading(true);
     setError('');
     try {
-      setInfo(await FirmwareService.getFirmwareInfo());
+      setInfo(loadInfo ? await loadInfo() : await FirmwareService.getFirmwareInfo());
     } catch (e) {
       setError(e.message || String(e));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [loadInfo]);
 
-  useEffect(() => { refreshInfo(); }, [refreshInfo]);
+  useEffect(() => {
+    if (initialInfo) {
+      setInfo(initialInfo);
+      setLoading(false);
+    }
+  }, [initialInfo]);
+
+  useEffect(() => {
+    if (autoLoad && !initialInfo) refreshInfo();
+  }, [autoLoad, initialInfo, refreshInfo]);
 
   /* Warn the user if they try to navigate away mid-upload — a refresh would
    * not actually cancel the upload on the server, but would lose the UI
@@ -152,7 +162,12 @@ export default function FirmwareUpdatePanel() {
     await new Promise((r) => setTimeout(r, 3000));
     while (Date.now() < deadline) {
       try {
-        const r = await fetch('/api/health', { credentials: 'same-origin', cache: 'no-store' });
+        const r = await HttpClient.get('/api/health', {
+          cache: 'no-store',
+          skipAuth: true,
+          priority: 'critical',
+          deduplicate: false,
+        });
         if (r.ok) {
           setPhase('done');
           /* Force a hard reload so the new bundle is fetched and the session

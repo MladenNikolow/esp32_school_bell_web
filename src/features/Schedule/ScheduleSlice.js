@@ -50,20 +50,33 @@ const initialState = {
   saving: false,
   error: null,
   saveSuccess: false,
+  loadedAt: { settings: 0, today: 0, default: 0, templates: 0, exceptions: 0 },
 };
 
 export const fetchSettings = createAsyncThunk('schedule/fetchSettings', async (_, { signal }) => ScheduleService.getSettings(signal));
 export const saveSettings  = createAsyncThunk('schedule/saveSettings',  async (payload, { signal }) => ScheduleService.saveSettings(payload, signal));
-export const fetchToday    = createAsyncThunk('schedule/fetchToday',    async (_, { signal }) => ScheduleService.getToday(signal));
+export const fetchToday = createAsyncThunk(
+  'schedule/fetchToday',
+  async (_, { signal }) => ScheduleService.getToday({ signal, priority: 'visible' }),
+  { condition: (_, { getState }) => Date.now() - getState().schedule.loadedAt.today >= 10000 },
+);
 export const saveToday     = createAsyncThunk('schedule/saveToday',     async (payload, { signal }) => {
   const cleaned = payload?.customBells?.bells
     ? { ...payload, customBells: { ...payload.customBells, bells: sortAndStrip(payload.customBells.bells) } }
     : payload;
   return ScheduleService.saveToday(cleaned, signal);
 });
-export const fetchDefault  = createAsyncThunk('schedule/fetchDefault',  async (_, { signal }) => ScheduleService.getDefault(signal));
+export const fetchDefault = createAsyncThunk(
+  'schedule/fetchDefault',
+  async (_, { signal }) => ScheduleService.getDefault({ signal, priority: 'visible' }),
+  { condition: (_, { getState }) => Date.now() - getState().schedule.loadedAt.default >= 60000 },
+);
 export const saveDefault   = createAsyncThunk('schedule/saveDefault',   async (bells, { signal }) => ScheduleService.saveDefault(sortAndStrip(bells), signal));
-export const fetchTemplates= createAsyncThunk('schedule/fetchTemplates',async (_, { signal }) => ScheduleService.getTemplates(signal));
+export const fetchTemplates = createAsyncThunk(
+  'schedule/fetchTemplates',
+  async (_, { signal }) => ScheduleService.getTemplates({ signal, priority: 'supporting' }),
+  { condition: (_, { getState }) => Date.now() - getState().schedule.loadedAt.templates >= 60000 },
+);
 export const saveTemplates = createAsyncThunk('schedule/saveTemplates', async (templates, { signal }) => {
   const cleaned = templates.map((tpl) => tpl ? { ...tpl, bells: sortAndStrip(tpl.bells) } : null);
   return ScheduleService.saveTemplates(cleaned, signal);
@@ -130,6 +143,12 @@ const scheduleSlice = createSlice({
     setDefaultBells(state, { payload }) { state.default.bells = payload; },
     setTemplates(state, { payload })    { state.templates = payload; },
     clearExceptionDetail(state, { payload: id }) { delete state.exceptionDetail[id]; },
+    hydrateSettings(state, { payload }) {
+      if (payload?.timezone !== undefined) state.timezone = payload.timezone;
+      if (payload?.workingDays !== undefined) state.workingDays = payload.workingDays;
+      if (payload?.ringDurationSec !== undefined) state.ringDurationSec = payload.ringDurationSec;
+      state.loadedAt.settings = Date.now();
+    },
   },
   extraReducers: (builder) => {
     ap(builder, fetchSettings, null, (s, p) => {
@@ -143,12 +162,14 @@ const scheduleSlice = createSlice({
       if (p?.ringDurationSec !== undefined) s.ringDurationSec = p.ringDurationSec;
     });
     ap(builder, fetchToday, null, (s, p) => {
+      s.loadedAt.today = Date.now();
       s.today.bells            = assignIds(sortBells(p?.bells ?? []));
       s.today.dayType          = p?.dayType ?? null;
       s.today.source           = p?.source ?? null;
       s.today.multiDayException= p?.multiDayException ?? false;
     });
     apSave(builder, saveToday, (s, p) => {
+      s.loadedAt.today = Date.now();
       if (p?.bells) {
         s.today.bells            = assignIds(sortBells(p.bells));
         s.today.dayType          = p.dayType ?? s.today.dayType;
@@ -156,15 +177,23 @@ const scheduleSlice = createSlice({
         s.today.multiDayException= p.multiDayException ?? false;
       }
     });
-    ap(builder, fetchDefault, null, (s, p) => { s.default.bells = assignIds(sortBells(p?.bells ?? [])); });
-    apSave(builder, saveDefault, (s, p) => { if (p?.bells) s.default.bells = assignIds(sortBells(p.bells)); });
+    ap(builder, fetchDefault, null, (s, p) => {
+      s.default.bells = assignIds(sortBells(p?.bells ?? []));
+      s.loadedAt.default = Date.now();
+    });
+    apSave(builder, saveDefault, (s, p) => {
+      if (p?.bells) s.default.bells = assignIds(sortBells(p.bells));
+      s.loadedAt.default = Date.now();
+    });
     ap(builder, fetchTemplates, null, (s, p) => {
+      s.loadedAt.templates = Date.now();
       s.templates = (p?.templates ?? [null, null, null]).map((tpl) =>
         tpl ? { ...tpl, bells: assignIds(tpl.bells || []) } : null
       );
       s.builtins  = p?.builtins ?? [];
     });
     apSave(builder, saveTemplates, (s, p) => {
+      s.loadedAt.templates = Date.now();
       if (p?.templates) s.templates = p.templates.map((tpl) =>
         tpl ? { ...tpl, bells: assignIds(tpl.bells || []) } : null
       );
@@ -243,7 +272,7 @@ const scheduleSlice = createSlice({
 export const {
   clearError, clearSaveSuccess,
   setWorkingDays, setTimezone, setRingDurationSec,
-  setTodayBells, setDefaultBells, setTemplates, clearExceptionDetail,
+  setTodayBells, setDefaultBells, setTemplates, clearExceptionDetail, hydrateSettings,
 } = scheduleSlice.actions;
 
 export default scheduleSlice.reducer;

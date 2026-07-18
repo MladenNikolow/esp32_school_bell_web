@@ -1,5 +1,5 @@
 import HttpRequestAgent from '../utils/HttpRequestAgent.js';
-import HttpDiagnostics from '../utils/HttpDiagnostics.js';
+import HttpClient from '../utils/HttpClient.js';
 import { API_CONFIG, getApiUrl } from '../config/apiConfig.js';
 
 const agent = HttpRequestAgent;
@@ -34,14 +34,11 @@ const TlsService = {
    */
   downloadCertificate: async () => {
     const endpoint = getApiUrl(API_CONFIG.ENDPOINTS.SYSTEM_TLS_DOWNLOAD);
-    const diagnostic = HttpDiagnostics.start('GET', endpoint);
     try {
-      const res = await fetch(endpoint, {
-        method: 'GET',
-        credentials: 'include',
+      const res = await HttpClient.get(endpoint, {
         headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        priority: 'critical',
       });
-      HttpDiagnostics.response(diagnostic, res);
       if (!res.ok) throw new Error('Failed to download certificate');
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
@@ -52,12 +49,7 @@ const TlsService = {
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
-    } catch (error) {
-      HttpDiagnostics.error(diagnostic, error);
-      throw error;
-    } finally {
-      HttpDiagnostics.finish(diagnostic);
-    }
+    } catch (error) { throw error; }
   },
 };
 

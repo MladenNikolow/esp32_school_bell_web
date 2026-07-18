@@ -1,6 +1,7 @@
 // src/utils/HttpClient.js
 import TokenManager from './TokenManager.js';
 import HttpDiagnostics from './HttpDiagnostics.js';
+import RequestScheduler from './RequestScheduler.js';
 import { isPublicEndpoint, API_CONFIG } from '../config/apiConfig.js';
 
 /**
@@ -93,7 +94,14 @@ class HttpClient {
    * @returns {Promise<Response>} Fetch response
    */
   async request(url, options = {}) {
-    const { skipAuth = false, skipAuthErrorHandling = false, ...fetchOptions } = options;
+    const {
+      skipAuth = false,
+      skipAuthErrorHandling = false,
+      priority = null,
+      exclusive = false,
+      deduplicate = true,
+      ...fetchOptions
+    } = options;
 
     // Prepare headers
     const headers = {
@@ -116,14 +124,67 @@ class HttpClient {
     }
 
     // Make the request — browser sends HttpOnly cookie automatically
-    const diagnostic = HttpDiagnostics.start(method, url);
-    try {
-      const response = await fetch(url, {
-        ...fetchOptions,
-        headers,
-        credentials: 'same-origin',
+    const requestPriority = priority ?? (method === 'GET' ? 'visible' : 'critical');
+    const normalizedUrl = new URL(url, window.location.origin).toString();
+    const key = method === 'GET' && deduplicate ? `${method}:${normalizedUrl}` : null;
+    const queuedAt = performance.now();
+    let startedAt = queuedAt;
+    const execute = async () => {
+      let lastError;
+      const attempts = method === 'GET' ? 2 : 1;
+      for (let attempt = 0; attempt < attempts; attempt += 1) {
+        const diagnostic = HttpDiagnostics.start(method, url, {
+          queuedAt: startedAt,
+          priority: requestPriority,
+          retryAttempt: attempt,
+        });
+        try {
+          const response = await fetch(url, {
+            ...fetchOptions,
+            headers,
+            credentials: 'same-origin',
+          });
+          HttpDiagnostics.response(diagnostic, response);
+          return response;
+        } catch (error) {
+          HttpDiagnostics.error(diagnostic, error);
+          lastError = error;
+          if (!(error instanceof TypeError) || attempt + 1 >= attempts) throw error;
+          const delay = 250 + Math.floor(Math.random() * 251);
+          HttpDiagnostics.event(method, url, 'retry', { retryAttempt: attempt + 1, delayMs: delay });
+          await new Promise((resolve) => setTimeout(resolve, delay));
+        } finally {
+          HttpDiagnostics.finish(diagnostic);
+        }
+      }
+      throw lastError;
+    };
+
+    if (key && RequestScheduler.inFlight.has(key)) {
+      HttpDiagnostics.event(method, url, 'deduplicated', {
+        priority: requestPriority,
+        deduplicated: true,
       });
-      HttpDiagnostics.response(diagnostic, response);
+    }
+
+    try {
+      const response = await RequestScheduler.schedule(execute, {
+        priority: requestPriority,
+        key,
+        signal: fetchOptions.signal,
+        exclusive,
+        onQueued: () => HttpDiagnostics.event(method, url, 'queued', {
+          queuedAt,
+          priority: requestPriority,
+        }),
+        onStarted: () => {
+          startedAt = performance.now();
+          HttpDiagnostics.event(method, url, 'dequeued', {
+            priority: requestPriority,
+            queueWaitMs: Math.round(startedAt - queuedAt),
+          });
+        },
+      });
 
       if (!skipAuthErrorHandling && (response.status === 401 || response.status === 403)) {
         TokenManager.clearAuthSession();
@@ -134,12 +195,7 @@ class HttpClient {
       }
 
       return response;
-    } catch (error) {
-      HttpDiagnostics.error(diagnostic, error);
-      throw error;
-    } finally {
-      HttpDiagnostics.finish(diagnostic);
-    }
+    } catch (error) { throw error; }
   }
 
   /**

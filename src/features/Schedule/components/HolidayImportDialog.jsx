@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useSelector } from 'react-redux';
 import ScheduleService from '../../../services/ScheduleService.js';
 import useLocale from '../../../hooks/useLocale.jsx';
 
@@ -182,8 +183,8 @@ export default function HolidayImportDialog({
   /** Per-row override: Map<key, { action?, conflictAction?, templateIdx? }> */
   const [overrides, setOverrides] = useState(() => new Map());
 
-  /** Templates list (3 slots; null = empty). Loaded on dialog open. */
-  const [templates, setTemplates] = useState([null, null, null]);
+  /** Shared Schedule cache; the dialog never starts its own templates GET. */
+  const templates = useSelector((state) => state.schedule.templates);
 
   const [submitting, setSubmitting] = useState(false);
   const [resultMsg, setResultMsg] = useState('');
@@ -212,21 +213,14 @@ export default function HolidayImportDialog({
       setFetchedAt('');
       setSelection(new Set());
     }
-    /* Load templates list so the user can pick one when defaultAction=template.
-     * Best-effort: failure here just hides the template picker. */
-    let cancelled = false;
-    ScheduleService.getTemplates()
-      .then((data) => {
-        if (cancelled) return;
-        const tpls = Array.isArray(data?.templates) ? data.templates : [null, null, null];
-        setTemplates(tpls);
-        const firstUsed = tpls.findIndex((tpl) => tpl);
-        if (firstUsed >= 0) setGlobalTemplateIdx(firstUsed);
-      })
-      .catch(() => { /* leave templates empty */ });
-    return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const firstUsed = templates.findIndex((tpl) => tpl);
+    if (firstUsed >= 0) setGlobalTemplateIdx(firstUsed);
+  }, [open, templates]);
 
   /* ---------- Abort any in-flight request when dialog closes ---------- */
   useEffect(() => {

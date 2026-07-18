@@ -13,7 +13,7 @@ const BELL_STATE_CLASS = {
 
 export default function DashboardPage() {
   const dispatch = useDispatch();
-  const { bellState, panicMode, dayType, timeSynced, lastSyncAgeSec, currentTime, currentDate, nextBell, error } =
+  const { bellState, panicMode, dayType, timeSynced, lastSyncAgeSec, currentTime, currentDate, nextBell, error, loadedAt } =
     useSelector((s) => s.dashboard);
   const ringDurationSec = useSelector((s) => s.schedule.ringDurationSec);
   const { t } = useLocale();
@@ -21,27 +21,42 @@ export default function DashboardPage() {
   const [bellFeedback, setBellFeedback] = useState(null);
   const { testingBell } = useSelector((s) => s.settings);
   const intervalRef = useRef(null);
+  const inFlightRef = useRef(null);
 
-  const refresh = useCallback(() => {
-    dispatch(fetchBellStatus());
-  }, [dispatch]);
+  const refresh = useCallback((force = false) => {
+    if (document.visibilityState !== 'visible' || inFlightRef.current) return inFlightRef.current;
+    if (!force && Date.now() - loadedAt < 5000) return null;
+    const request = dispatch(fetchBellStatus());
+    inFlightRef.current = request;
+    request.finally(() => {
+      if (inFlightRef.current === request) inFlightRef.current = null;
+    });
+    return request;
+  }, [dispatch, loadedAt]);
 
   useEffect(() => {
     refresh();
-    intervalRef.current = setInterval(refresh, 5000);
-    return () => clearInterval(intervalRef.current);
+    intervalRef.current = setInterval(() => refresh(), 5000);
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') refresh();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      clearInterval(intervalRef.current);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
   }, [refresh]);
 
   const handlePanicToggle = () => {
     if (!panicMode) {
       setConfirmPanic(true);
     } else {
-      dispatch(togglePanic(false));
+      dispatch(togglePanic(false)).then(() => refresh(true));
     }
   };
 
   const confirmPanicEnable = () => {
-    dispatch(togglePanic(true));
+    dispatch(togglePanic(true)).then(() => refresh(true));
     setConfirmPanic(false);
   };
 
@@ -109,7 +124,7 @@ export default function DashboardPage() {
             setBellFeedback(null);
             dispatch(testBell(duration)).then((result) => {
               if (result.meta.requestStatus === 'fulfilled') {
-                setTimeout(() => dispatch(fetchBellStatus()), (duration * 1000) + 500);
+                setTimeout(() => refresh(true), (duration * 1000) + 500);
               } else {
                 setBellFeedback('error');
                 setTimeout(() => setBellFeedback(null), 4000);

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import {
-  fetchToday, saveToday, fetchTemplates,
+  saveToday,
   setTodayBells, clearError, clearSaveSuccess,
 } from '../ScheduleSlice.js';
 import BellSetEditor from '../components/BellSetEditor.jsx';
@@ -14,13 +14,6 @@ export default function TodayTab() {
     useSelector((s) => s.schedule);
   const [editing, setEditing] = useState(false);
   const [localBells, setLocalBells] = useState([]);
-
-  useEffect(() => {
-    dispatch(fetchToday());
-    // Templates power the "Apply Template" picker in the bell editor; make sure
-    // they are available even if the Templates tab was not visited first.
-    dispatch(fetchTemplates());
-  }, [dispatch]);
 
   useEffect(() => {
     if (saveSuccess) {
@@ -38,10 +31,7 @@ export default function TodayTab() {
   const cancelEdit = () => setEditing(false);
 
   const handleSave = () => {
-    dispatch(saveToday({ action: 'custom', customBells: { bells: localBells } }))
-      .unwrap()
-      .then(() => dispatch(fetchToday()))
-      .catch(() => {});
+    dispatch(saveToday({ action: 'custom', customBells: { bells: localBells } }));
   };
 
   const dayTypeLabelKey = today.dayType ? `dayType.${today.dayType}` : null;

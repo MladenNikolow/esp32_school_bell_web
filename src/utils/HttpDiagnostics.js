@@ -53,12 +53,15 @@ class HttpDiagnostics {
     return entry;
   }
 
-  start(method, url) {
+  start(method, url, metadata = {}) {
     const context = {
       id: ++this.sequence,
       method,
       endpoint: this._safeEndpoint(url),
       startedAt: performance.now(),
+      queuedAt: metadata.queuedAt ?? performance.now(),
+      priority: metadata.priority ?? 'visible',
+      retryAttempt: metadata.retryAttempt ?? 0,
     };
     this.active += 1;
     this.peakActive = Math.max(this.peakActive, this.active);
@@ -69,6 +72,9 @@ class HttpDiagnostics {
       endpoint: context.endpoint,
       active: this.active,
       peakActive: this.peakActive,
+      priority: context.priority,
+      queueWaitMs: Math.round(context.startedAt - context.queuedAt),
+      retryAttempt: context.retryAttempt,
     });
     if (this.enabled) {
       console.debug(
@@ -77,6 +83,15 @@ class HttpDiagnostics {
       );
     }
     return context;
+  }
+
+  event(method, url, phase, metadata = {}) {
+    return this._record({
+      phase,
+      method,
+      endpoint: this._safeEndpoint(url),
+      ...metadata,
+    });
   }
 
   response(context, response) {

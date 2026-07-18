@@ -46,7 +46,12 @@ function readFileAsText(file) {
 }
 
 /* ------------------------------------------------------------------ */
-export default function TlsSettingsPanel() {
+export default function TlsSettingsPanel({
+  initialStatus = null,
+  autoLoad = true,
+  loadStatusOverride = null,
+  enableFocusRefresh = true,
+}) {
   const { t } = useLocale();
   const user = useSelector((s) => s.auth.user);
   const isService = user?.role === 'service';
@@ -84,7 +89,9 @@ export default function TlsSettingsPanel() {
     setLoading(true);
     setError(null);
     try {
-      const data = await TlsService.getStatus(signal);
+      const data = loadStatusOverride
+        ? await loadStatusOverride(signal)
+        : await TlsService.getStatus(signal);
       setStatus(data);
       /* Seed mode selector from persisted setting */
       setSelectedMode(data.mode_setting || (data.enabled ? 'https' : 'http'));
@@ -93,19 +100,27 @@ export default function TlsSettingsPanel() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [loadStatusOverride]);
 
   useEffect(() => {
+    if (!autoLoad || initialStatus) return undefined;
     const ctrl = new AbortController();
     loadStatus(ctrl.signal);
     return () => ctrl.abort();
-  }, [loadStatus]);
+  }, [autoLoad, initialStatus, loadStatus]);
 
   useEffect(() => {
+    if (!initialStatus) return;
+    setStatus(initialStatus);
+    setSelectedMode(initialStatus.mode_setting || (initialStatus.enabled ? 'https' : 'http'));
+  }, [initialStatus]);
+
+  useEffect(() => {
+    if (!enableFocusRefresh) return undefined;
     const onFocus = () => { const c = new AbortController(); loadStatus(c.signal); };
     window.addEventListener('focus', onFocus);
     return () => window.removeEventListener('focus', onFocus);
-  }, [loadStatus]);
+  }, [enableFocusRefresh, loadStatus]);
 
   /* ---- Mode save ---- */
   const handleSaveMode = async () => {

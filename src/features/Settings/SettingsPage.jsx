@@ -1,15 +1,16 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import {
-  fetchSettings, saveSettings,
+  saveSettings,
   setWorkingDays, setTimezone, setRingDurationSec,
   clearError as clearScheduleError,
   clearSaveSuccess,
+  hydrateSettings,
 } from '../Schedule/ScheduleSlice.js';
 import {
-  fetchSystemInfo, rebootDevice, factoryReset, syncTime,
-  fetchPin, savePin,
-  fetchCredentials, saveCredentials, deleteCredentials,
+  rebootDevice, factoryReset, syncTime, savePin,
+  saveCredentials, deleteCredentials,
+  fetchSettingsCore, fetchSettingsAccess, fetchSettingsMaintenance,
   clearError, clearActionSuccess,
 } from './SettingsSlice.js';
 import TokenManager from '../../utils/TokenManager.js';
@@ -32,8 +33,10 @@ export default function SettingsPage() {
   /* Settings state (system info, actions) */
   const { systemInfo, rebooting, resetting, syncing, error, actionSuccess,
     currentPin, pinLoading, pinSaving,
-    clientCredentials, credentialsLoading, credentialsSaving, credentialsDeleting } =
+    clientCredentials, credentialsLoading, credentialsSaving, credentialsDeleting,
+    firmwareInfo, tlsStatus, resources } =
     useSelector((s) => s.settings);
+  const maintenanceRef = useRef(null);
 
   /* Auth state (role check) */
   const user = useSelector((s) => s.auth.user);
@@ -49,13 +52,26 @@ export default function SettingsPage() {
   const [credentialError, setCredentialError] = useState('');
 
   useEffect(() => {
-    dispatch(fetchSettings());
-    dispatch(fetchSystemInfo());
-    dispatch(fetchPin());
-    if (isService) {
-      dispatch(fetchCredentials());
-    }
-  }, [dispatch, isService]);
+    dispatch(fetchSettingsCore()).then((result) => {
+      if (result.meta.requestStatus === 'fulfilled') {
+        dispatch(hydrateSettings(result.payload.scheduleSettings));
+      }
+      dispatch(fetchSettingsAccess());
+    });
+  }, [dispatch]);
+
+  useEffect(() => {
+    const node = maintenanceRef.current;
+    if (!node) return undefined;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) dispatch(fetchSettingsMaintenance());
+    }, { rootMargin: '600px 0px' });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [dispatch]);
+
+  const loadMaintenancePart = useCallback((part) =>
+    dispatch(fetchSettingsMaintenance({ force: true })).unwrap().then((payload) => payload?.[part]), [dispatch]);
 
   useEffect(() => {
     if (saveSuccess) {
@@ -98,8 +114,11 @@ export default function SettingsPage() {
     dispatch(factoryReset()).then((result) => {
       if (result.meta.requestStatus === 'fulfilled') {
         // Reload fresh data from device after reset
-        dispatch(fetchSettings());
-        dispatch(fetchSystemInfo());
+        dispatch(fetchSettingsCore({ force: true })).then((refresh) => {
+          if (refresh.meta.requestStatus === 'fulfilled') {
+            dispatch(hydrateSettings(refresh.payload.scheduleSettings));
+          }
+        });
       }
     });
   };
@@ -118,7 +137,6 @@ export default function SettingsPage() {
       if (result.meta.requestStatus === 'fulfilled') {
         setNewPin('');
         setConfirmPin('');
-        dispatch(fetchPin());
       }
     });
   };
@@ -142,7 +160,6 @@ export default function SettingsPage() {
         setClientUsername('');
         setClientPassword('');
         setClientConfirmPassword('');
-        dispatch(fetchCredentials());
       }
     });
   };
@@ -402,7 +419,14 @@ export default function SettingsPage() {
         <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
           <button
             className={`save-button${syncing ? ' loading' : ''}`}
-            onClick={() => { dispatch(syncTime()).then(() => dispatch(fetchSystemInfo())); }}
+            onClick={() => {
+              dispatch(syncTime()).then(() =>
+                dispatch(fetchSettingsCore({ force: true })).then((refresh) => {
+                  if (refresh.meta.requestStatus === 'fulfilled') {
+                    dispatch(hydrateSettings(refresh.payload.scheduleSettings));
+                  }
+                }));
+            }}
             disabled={syncing}
           >
             {syncing ? t('settings.syncing') : t('settings.syncNow')}
@@ -445,11 +469,22 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* Firmware update (service role only) */}
-      <FirmwareUpdatePanel />
+      <div ref={maintenanceRef}>
+        {/* Firmware update (service role only) */}
+        <FirmwareUpdatePanel
+          initialInfo={firmwareInfo}
+          autoLoad={false}
+          loadInfo={() => loadMaintenancePart('firmware')}
+        />
 
-      {/* TLS / Certificate management */}
-      <TlsSettingsPanel />
+        {/* TLS / Certificate management */}
+        <TlsSettingsPanel
+          initialStatus={tlsStatus}
+          autoLoad={false}
+          enableFocusRefresh={resources.maintenance.status === 'ready'}
+          loadStatusOverride={() => loadMaintenancePart('tls')}
+        />
+      </div>
     </div>
   );
 }
