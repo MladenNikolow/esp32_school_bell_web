@@ -4,6 +4,7 @@
 // httpRequestAgent) for the binary upload so we can stream the bundle as
 // application/octet-stream and report upload progress through XHR.
 import httpRequestAgent from '../utils/HttpRequestAgent.js';
+import HttpDiagnostics from '../utils/HttpDiagnostics.js';
 import { API_CONFIG } from '../config/apiConfig.js';
 
 const FirmwareService = {
@@ -44,6 +45,17 @@ const FirmwareService = {
    */
   uploadBundle(file, onProgress) {
     return new Promise((resolve, reject) => {
+      const diagnostic = HttpDiagnostics.start(
+        'POST',
+        API_CONFIG.ENDPOINTS.SYSTEM_UPDATE,
+      );
+      let finished = false;
+      const finish = () => {
+        if (!finished) {
+          finished = true;
+          HttpDiagnostics.finish(diagnostic);
+        }
+      };
       const xhr = new XMLHttpRequest();
       xhr.open('POST', API_CONFIG.ENDPOINTS.SYSTEM_UPDATE, true);
       xhr.setRequestHeader('Content-Type', 'application/octet-stream');
@@ -63,19 +75,41 @@ const FirmwareService = {
       }
 
       xhr.onload = () => {
+        HttpDiagnostics.response(diagnostic, {
+          status: xhr.status,
+          ok: xhr.status >= 200 && xhr.status < 300,
+        });
         let body = null;
         try { body = JSON.parse(xhr.responseText); } catch (_) { /* ignore */ }
         if (xhr.status >= 200 && xhr.status < 300) {
           resolve(body || { success: true });
         } else {
-          reject(new Error(
-            (body && body.error) || `Upload failed (HTTP ${xhr.status})`
-          ));
+          const error = new Error(
+            (body && body.error) || `Upload failed (HTTP ${xhr.status})`,
+          );
+          HttpDiagnostics.error(diagnostic, error);
+          reject(error);
         }
+        finish();
       };
-      xhr.onerror   = () => reject(new Error('Network error during upload'));
-      xhr.ontimeout = () => reject(new Error('Upload timed out'));
-      xhr.onabort   = () => reject(new Error('Upload aborted'));
+      xhr.onerror = () => {
+        const error = new TypeError('Network error during upload');
+        HttpDiagnostics.error(diagnostic, error);
+        finish();
+        reject(error);
+      };
+      xhr.ontimeout = () => {
+        const error = new Error('Upload timed out');
+        HttpDiagnostics.error(diagnostic, error);
+        finish();
+        reject(error);
+      };
+      xhr.onabort = () => {
+        const error = new DOMException('Upload aborted', 'AbortError');
+        HttpDiagnostics.error(diagnostic, error);
+        finish();
+        reject(error);
+      };
 
       xhr.send(file);
     });

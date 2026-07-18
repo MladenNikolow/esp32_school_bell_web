@@ -1,5 +1,6 @@
 // src/utils/HttpClient.js
 import TokenManager from './TokenManager.js';
+import HttpDiagnostics from './HttpDiagnostics.js';
 import { isPublicEndpoint, API_CONFIG } from '../config/apiConfig.js';
 
 /**
@@ -115,26 +116,30 @@ class HttpClient {
     }
 
     // Make the request — browser sends HttpOnly cookie automatically
-    const response = await fetch(url, {
-      ...fetchOptions,
-      headers,
-      credentials: 'same-origin',
-    });
+    const diagnostic = HttpDiagnostics.start(method, url);
+    try {
+      const response = await fetch(url, {
+        ...fetchOptions,
+        headers,
+        credentials: 'same-origin',
+      });
+      HttpDiagnostics.response(diagnostic, response);
 
-    // Handle authentication errors
-    if (!skipAuthErrorHandling && (response.status === 401 || response.status === 403)) {
-      // Clear client-side auth metadata on authentication failure
-      TokenManager.clearAuthSession();
-      
-      // Dispatch custom event for auth error handling
-      window.dispatchEvent(new CustomEvent('auth-error', {
-        detail: { status: response.status, url }
-      }));
-      
-      throw new Error(`Authentication failed: ${response.status}`);
+      if (!skipAuthErrorHandling && (response.status === 401 || response.status === 403)) {
+        TokenManager.clearAuthSession();
+        window.dispatchEvent(new CustomEvent('auth-error', {
+          detail: { status: response.status, url }
+        }));
+        throw new Error(`Authentication failed: ${response.status}`);
+      }
+
+      return response;
+    } catch (error) {
+      HttpDiagnostics.error(diagnostic, error);
+      throw error;
+    } finally {
+      HttpDiagnostics.finish(diagnostic);
     }
-
-    return response;
   }
 
   /**
