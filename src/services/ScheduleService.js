@@ -25,7 +25,24 @@ const ScheduleService = {
   saveToday: (payload, signal) =>
     agent.post(API_CONFIG.ENDPOINTS.SCHEDULE_TODAY, payload, signal),
 
-  // Exceptions — granular CRUD + paginated list
+  /** POST /api/schedule/today/cancel -remove today's ad-hoc override (if any) */
+  cancelToday: (signal) =>
+    agent.post(API_CONFIG.ENDPOINTS.SCHEDULE_TODAY_CANCEL, {}, signal),
+
+  // Weekday plan map -{ weekdayPlans: [-1..4 x7], workingDays: [...] }
+  getWeek: (signal) =>
+    agent.get(API_CONFIG.ENDPOINTS.SCHEDULE_WEEK, signal),
+
+  saveWeek: (payload, signal) =>
+    agent.post(API_CONFIG.ENDPOINTS.SCHEDULE_WEEK, payload, signal),
+
+  /** POST /api/schedule/weekday -set a single weekday's plan atomically.
+   *  payload: { day: 0..6, action: 'default'|'template'|'custom',
+   *             templateIdx?, customBells?: { bells: [...] } } */
+  saveWeekday: (payload, signal) =>
+    agent.post(API_CONFIG.ENDPOINTS.SCHEDULE_WEEKDAY, payload, signal),
+
+  // Exceptions -granular CRUD + paginated list
   /** GET /api/schedule/exceptions?offset=&limit=&from=&to= */
   getExceptions: ({ offset = 0, limit = 10, from, to } = {}, signal) => {
     let url = `${API_CONFIG.ENDPOINTS.SCHEDULE_EXCEPTIONS}?offset=${offset}&limit=${limit}`;
@@ -49,11 +66,11 @@ const ScheduleService = {
   /** DELETE /api/schedule/exceptions/:id */
   deleteException: (id, signal) =>
     agent.delete(`${API_CONFIG.ENDPOINTS.SCHEDULE_EXCEPTIONS}/${id}`, signal),
-  /** DELETE /api/schedule/exceptions  — clear-all */
+  /** DELETE /api/schedule/exceptions  -clear-all */
   deleteAllExceptions: (signal) =>
     agent.delete(API_CONFIG.ENDPOINTS.SCHEDULE_EXCEPTIONS, signal),
 
-  // Holiday import (OpenHolidays — Bulgaria)
+  // Holiday import (OpenHolidays -Bulgaria)
 
   /** GET /api/schedule/holidays/preview?year=YYYY&lang=BG|EN
    *  `lang` is optional; firmware defaults to BG when missing/invalid. */

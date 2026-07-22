@@ -80,7 +80,7 @@ class AuthService {
    */
   async logout() {
     try {
-      // Notify server of logout (best effort) — server clears the HttpOnly cookie
+      // Notify server of logout (best effort) -server clears the HttpOnly cookie
       if (this.tokenManager.hasAuthSession()) {
         await this.httpClient.post(API_CONFIG.ENDPOINTS.LOGOUT, {}, {
           timeout: 5000,
@@ -101,7 +101,7 @@ class AuthService {
    */
   async validateStoredToken() {
     try {
-      // Always ask the server — the HttpOnly session cookie is the source of truth
+      // Always ask the server -the HttpOnly session cookie is the source of truth
       // and is shared across tabs (unlike sessionStorage).
       const response = await this.httpClient.get(API_CONFIG.ENDPOINTS.VALIDATE_TOKEN, {
         skipAuth: true,

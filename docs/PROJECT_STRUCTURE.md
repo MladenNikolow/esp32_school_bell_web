@@ -1,11 +1,11 @@
-﻿# ESP32 School Bell — Web Frontend Project Structure
+﻿# ESP32 School Bell -Web Frontend Project Structure
 
 ## Tech Stack
 
-- **React 18** + **Redux Toolkit** (RTK) — component UI and state management
-- **Vite** — build tool; output to `dist/` then bundled into FatFS partition
-- **CSS** — all styles in `src/styles/app.css` (no CSS modules)
-- **i18n** — plain JS object dictionaries (`en.js` / `bg.js`), accessed via `useLocale` hook
+- **React 18** + **Redux Toolkit** (RTK) -component UI and state management
+- **Vite** -build tool; output to `dist/` then bundled into FatFS partition
+- **CSS** -all styles in `src/styles/app.css` (no CSS modules)
+- **i18n** -plain JS object dictionaries (`en.js` / `bg.js`), accessed via `useLocale` hook
 
 ---
 
@@ -14,7 +14,7 @@
 ```
 src/
 ├── app/
-│   └── store.js                     Redux store — slices: mode, auth, wifiConfig, dashboard, schedule, settings, diagnostics
+│   └── store.js                     Redux store -slices: mode, auth, wifiConfig, dashboard, schedule, settings, diagnostics
 │
 ├── components/
 │   └── RingyLogo.jsx                Shared logo component
@@ -28,7 +28,7 @@ src/
 │   │   └── AppSlice.jsx             mode slice (device mode control)
 │   │
 │   ├── Auth/
-│   │   ├── AuthSlice.js             auth slice — loginUser, logoutUser, initializeAuth thunks
+│   │   ├── AuthSlice.js             auth slice -loginUser, logoutUser, initializeAuth thunks
 │   │   └── components/
 │   │       ├── AuthGuard.jsx        Session validation on startup; renders nav + active tab page
 │   │       ├── LoginPage.jsx        Login form
@@ -37,11 +37,11 @@ src/
 │   │
 │   ├── Dashboard/
 │   │   ├── DashboardPage.jsx        Live clock, bell status, test bell, panic toggle
-│   │   ├── DashboardSlice.js        dashboard slice — fetchBellStatus, togglePanic
+│   │   ├── DashboardSlice.js        dashboard slice -fetchBellStatus, togglePanic
 │   │   └── DeviceClock.jsx          Clock polling /api/status
 │   │
 │   ├── Navigation/
-│   │   └── Navigation.jsx           Top tab bar — tabs: dashboard | schedule | settings | diagnostics
+│   │   └── Navigation.jsx           Top tab bar -tabs: dashboard | schedule | settings | diagnostics
 │   │
 │   ├── Schedule/
 │   │   ├── SchedulePage.jsx         Sub-tab container (Today / Default / Templates / Exceptions)
@@ -65,12 +65,12 @@ src/
 │   │   │   ├── TemplatesTab.jsx     3 custom template slots + read-only built-in templates
 │   │   │   └── ExceptionsTab.jsx    Exception CRUD (dayOff / template / custom)
 │   │   │
-│   │   └── BellScheduleEditor.jsx   DEAD CODE — replaced by BellSetEditor.jsx
+│   │   └── BellScheduleEditor.jsx   DEAD CODE -replaced by BellSetEditor.jsx
 │   │
 │   ├── Settings/
 │   │   ├── SettingsPage.jsx         General (workingDays, timezone, ringDurationSec), PIN,
 │   │   │                            user management, WiFi, time sync, system actions, system info
-│   │   └── SettingsSlice.js         settings slice — WiFi scan/save, PIN, system info, reboot,
+│   │   └── SettingsSlice.js         settings slice -WiFi scan/save, PIN, system info, reboot,
 │   │                                factory reset, syncTime, testBell
 │   │
 │   ├── WiFiConfig/
@@ -78,15 +78,15 @@ src/
 │   │   └── components/
 │   │       └── WiFiConfigPage.jsx   Setup wizard (shown when no WiFi credentials on device)
 │   │
-│   ├── Calendar/                    DEAD CODE — removed from store and navigation in Phase 5
+│   ├── Calendar/                    DEAD CODE -removed from store and navigation in Phase 5
 │   │   ├── CalendarPage.jsx
 │   │   └── CalendarSlice.js
 │   │
 │   └── Home/
-│       └── HomePage.jsx             DEAD CODE — replaced by Dashboard + Schedule + Settings
+│       └── HomePage.jsx             DEAD CODE -replaced by Dashboard + Schedule + Settings
 │
 ├── hooks/
-│   ├── useLocale.jsx                t(key), lang, setLang — i18n lookup hook
+│   ├── useLocale.jsx                t(key), lang, setLang -i18n lookup hook
 │   └── useTheme.js                  Dark/light theme toggle
 │
 ├── i18n/
@@ -107,7 +107,7 @@ src/
 │       └── AuthService.test.js
 │
 ├── styles/
-│   └── app.css                      Global stylesheet — all component and page styles
+│   └── app.css                      Global stylesheet -all component and page styles
 │
 ├── types/
 │   └── auth.js                      JSDoc types: AuthState, UserInfo, LoginCredentials
@@ -121,7 +121,7 @@ src/
 │   └── __tests__/
 │       └── integration.test.js
 │
-└── main.jsx                         Entry point — <Provider store> → <App>
+└── main.jsx                         Entry point -<Provider store> → <App>
 ```
 
 ---

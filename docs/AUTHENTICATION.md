@@ -2,7 +2,7 @@
 
 ## Architecture Overview
 
-The authentication system uses **HttpOnly session cookies** set by the ESP32 server. The client never sees or stores the actual session token — the browser manages it automatically. A `sessionStorage` metadata record tracks the *fact* of authentication for UI purposes. The system supports **dual-account role-based access** (service and client roles).
+The authentication system uses **HttpOnly session cookies** set by the ESP32 server. The client never sees or stores the actual session token -the browser manages it automatically. A `sessionStorage` metadata record tracks the *fact* of authentication for UI purposes. The system supports **dual-account role-based access** (service and client roles).
 
 | Layer | File | Responsibility |
 |-------|------|----------------|
@@ -14,9 +14,9 @@ The authentication system uses **HttpOnly session cookies** set by the ESP32 ser
 
 Supporting files:
 
-- `src/types/auth.js` — JSDoc type definitions (`AuthState`, `UserInfo`, `LoginCredentials`, `SessionMeta`, etc.)
-- `src/config/apiConfig.js` — API endpoints, public endpoint list, error messages, request configuration
-- `src/middleware/authMiddleware.js` — Redux middleware for auth error events and session expiration checks
+- `src/types/auth.js` -JSDoc type definitions (`AuthState`, `UserInfo`, `LoginCredentials`, `SessionMeta`, etc.)
+- `src/config/apiConfig.js` -API endpoints, public endpoint list, error messages, request configuration
+- `src/middleware/authMiddleware.js` -Redux middleware for auth error events and session expiration checks
 
 ---
 
@@ -30,10 +30,10 @@ Set-Cookie: session=<opaque_token>; HttpOnly; SameSite=Strict; Path=/
 
 | Property | Value | Purpose |
 |----------|-------|---------|
-| `HttpOnly` | *(flag)* | JavaScript cannot read the cookie — XSS cannot steal the credential |
-| `SameSite=Strict` | *(flag)* | Cookie only sent on same-site requests — primary CSRF defense |
+| `HttpOnly` | *(flag)* | JavaScript cannot read the cookie -XSS cannot steal the credential |
+| `SameSite=Strict` | *(flag)* | Cookie only sent on same-site requests -primary CSRF defense |
 | `Path=/` | `/` | Cookie available to all API paths |
-| `Expires/Max-Age` | *omitted* | Session cookie — automatically cleared when the browser closes |
+| `Expires/Max-Age` | *omitted* | Session cookie -automatically cleared when the browser closes |
 
 The browser sends this cookie automatically on every same-origin `fetch()` call when `credentials: 'same-origin'` is set. The client-side code never reads, stores, or transmits the token itself.
 
@@ -51,7 +51,7 @@ All POST/PUT/DELETE requests to protected endpoints must include:
 Content-Type: application/json
 ```
 
-HTML forms can only submit `application/x-www-form-urlencoded`, `multipart/form-data`, or `text/plain` — they cannot send `application/json`. The firmware rejects any mutating request without this header with **415 Unsupported Media Type**.
+HTML forms can only submit `application/x-www-form-urlencoded`, `multipart/form-data`, or `text/plain` -they cannot send `application/json`. The firmware rejects any mutating request without this header with **415 Unsupported Media Type**.
 
 ### 2. X-Requested-With Header
 
@@ -155,9 +155,9 @@ Has auth session metadata?
 Every HTTP request goes through `HttpClient.request()`:
 
 1. Checks if the request requires auth (`skipAuth` is not set).
-2. Checks `TokenManager.hasAuthSession()` — verifies the client-side metadata exists.
+2. Checks `TokenManager.hasAuthSession()` -verifies the client-side metadata exists.
 3. If auth is required but no session metadata → throws `Authentication required`.
-4. Sets `credentials: 'same-origin'` — the browser automatically attaches the HttpOnly session cookie.
+4. Sets `credentials: 'same-origin'` -the browser automatically attaches the HttpOnly session cookie.
 5. For POST/PUT/DELETE: automatically adds `X-Requested-With: XMLHttpRequest` (CSRF defense).
 6. If the response status is `401` or `403`:
    - Clears session metadata from `sessionStorage`.
@@ -255,7 +255,7 @@ The server returns a `role` field in the login/validate responses: `"service"` o
 
 ---
 
-## TokenManager — Detailed Reference
+## TokenManager -Detailed Reference
 
 **File**: `src/utils/TokenManager.js`  
 **Storage key**: `esp32_auth_meta` (in `sessionStorage`)  
@@ -272,10 +272,10 @@ Session metadata is stored in `sessionStorage` as a JSON string:
 }
 ```
 
-- `authenticated` — Always `true` when present; the record's existence indicates an active session.
-- `timestamp` — `Date.now()` at the moment of login, used for client-side session age checks.
+- `authenticated` -Always `true` when present; the record's existence indicates an active session.
+- `timestamp` -`Date.now()` at the moment of login, used for client-side session age checks.
 
-> **Important**: This is *metadata only*. The actual session credential is the HttpOnly cookie managed by the browser — JavaScript never sees it.
+> **Important**: This is *metadata only*. The actual session credential is the HttpOnly cookie managed by the browser -JavaScript never sees it.
 
 ### Primary Methods
 
@@ -296,10 +296,10 @@ These methods exist for backward compatibility. They delegate to the primary met
 |--------|-------------|-------|
 | `storeToken(token)` | `markAuthenticated()` | Ignores the `token` argument |
 | `getStoredToken()` | `hasAuthSession()` | Returns `'__httponly__'` (truthy placeholder) or `null` |
-| `clearStoredToken()` | `clearAuthSession()` | — |
-| `hasStoredToken()` | `hasAuthSession()` | — |
-| `getTokenAge()` | `getSessionAge()` | — |
-| `isTokenExpired(maxAge)` | `isSessionExpired(maxAge)` | — |
+| `clearStoredToken()` | `clearAuthSession()` | -|
+| `hasStoredToken()` | `hasAuthSession()` | -|
+| `getTokenAge()` | `getSessionAge()` | -|
+| `isTokenExpired(maxAge)` | `isSessionExpired(maxAge)` | -|
 
 ### Error Resilience
 
@@ -314,28 +314,28 @@ These methods exist for backward compatibility. They delegate to the primary met
 
 ```
 Login success
-  └─→ markAuthenticated()             — stores { authenticated: true, timestamp }
+  └─→ markAuthenticated()             -stores { authenticated: true, timestamp }
 
 Every API request
-  └─→ hasAuthSession()                — checks if client believes it's authenticated
+  └─→ hasAuthSession()                -checks if client believes it's authenticated
   └─→ browser sends HttpOnly cookie automatically (credentials: 'same-origin')
 
 401/403 response
-  └─→ clearAuthSession()              — removes metadata from sessionStorage
+  └─→ clearAuthSession()              -removes metadata from sessionStorage
 
 App startup
-  └─→ hasAuthSession()                — checks for existing session metadata
+  └─→ hasAuthSession()                -checks for existing session metadata
   └─→ server validates via GET /api/validate-token (cookie sent automatically)
 
 Session age check (middleware)
-  └─→ isSessionExpired(86400000)      — 24-hour client-side expiration check
+  └─→ isSessionExpired(86400000)      -24-hour client-side expiration check
 
 Logout
-  └─→ clearAuthSession()              — always clears, even if server logout fails
+  └─→ clearAuthSession()              -always clears, even if server logout fails
 
 Browser closed
-  └─→ sessionStorage cleared           — metadata gone
-  └─→ session cookie cleared           — credential gone (no Expires/Max-Age)
+  └─→ sessionStorage cleared           -metadata gone
+  └─→ session cookie cleared           -credential gone (no Expires/Max-Age)
 ```
 
 ---
@@ -383,13 +383,13 @@ Listens for `auth-error` `CustomEvent` on `window` (dispatched by `HttpClient` o
 
 ### 2. `tokenValidationMiddleware`
 
-Runs after `loginUser/fulfilled` and `initializeAuth/fulfilled` actions. Checks `TokenManager.isSessionExpired(24 * 60 * 60 * 1000)` — if the session metadata is older than 24 hours, dispatches `clearAuthToken()` to force re-authentication.
+Runs after `loginUser/fulfilled` and `initializeAuth/fulfilled` actions. Checks `TokenManager.isSessionExpired(24 * 60 * 60 * 1000)` -if the session metadata is older than 24 hours, dispatches `clearAuthToken()` to force re-authentication.
 
 > This is a client-side hint only. The server independently tracks session expiration and will return 401 for expired sessions regardless of the client-side check.
 
 ---
 
-## AuthGuard — Route Protection
+## AuthGuard -Route Protection
 
 **File**: `src/features/Auth/components/AuthGuard.jsx`
 
@@ -412,7 +412,7 @@ AuthGuard wraps the entire application. No protected route is accessible without
 
 | Threat | Defense | Layer |
 |--------|---------|-------|
-| **XSS token theft** | HttpOnly cookie — JS cannot read the credential | Server (Set-Cookie) |
+| **XSS token theft** | HttpOnly cookie -JS cannot read the credential | Server (Set-Cookie) |
 | **CSRF (form-based)** | `SameSite=Strict` cookie + `Content-Type: application/json` enforcement | Server |
 | **CSRF (XHR-based)** | `X-Requested-With: XMLHttpRequest` required header | Client + Server |
 | **Session persistence after browser close** | Session cookie (no Expires) + `sessionStorage` metadata | Browser |
@@ -461,7 +461,7 @@ X-Requested-With: XMLHttpRequest
 }
 ```
 
-**Success (200)** — session delivered via HttpOnly `Set-Cookie`:
+**Success (200)** -session delivered via HttpOnly `Set-Cookie`:
 ```json
 {
   "user": { "username": "school", "role": "client" },

@@ -140,7 +140,7 @@ export default function TlsSettingsPanel({
     setError(null);
     try {
       await TlsService.setMode(selectedMode);
-      showToast(`Mode set to ${selectedMode.toUpperCase()}. Device is restarting — reconnecting in 5 s…`);
+      showToast(`Mode set to ${selectedMode.toUpperCase()}. Device is restarting -reconnecting in 5 s…`);
       setTimeout(() => {
         const proto = selectedMode === 'https' ? 'https:' : 'http:';
         window.location.assign(window.location.href.replace(/^https?:/, proto));
@@ -164,13 +164,13 @@ export default function TlsSettingsPanel({
       const needRestart = res?.restart_required === true;
 
       if (needRestart) {
-        showToast('Certificate regenerated. Device is restarting — reconnecting in 8 s…');
+        showToast('Certificate regenerated. Device is restarting -reconnecting in 8 s…');
         setTimeout(() => {
           window.location.assign(window.location.href.replace(/^https?:/, 'https:'));
         }, 8000);
       } else {
         showToast('Certificate regenerated and stored. Switch to HTTPS mode to apply it.');
-        /* No restart in HTTP mode — just refresh the cert metadata in place. */
+        /* No restart in HTTP mode -just refresh the cert metadata in place. */
         await loadStatus();
         setRegenerating(false);
       }
@@ -211,13 +211,13 @@ export default function TlsSettingsPanel({
       setCertFile(null); setKeyFile(null);
 
       if (needRestart) {
-        showToast('Certificate installed. Device is restarting — reconnecting in 8 s…');
+        showToast('Certificate installed. Device is restarting -reconnecting in 8 s…');
         setTimeout(() => {
           window.location.assign(window.location.href.replace(/^https?:/, 'https:'));
         }, 8000);
       } else {
         showToast('Certificate installed and stored. Switch to HTTPS mode to apply it.');
-        /* No restart in HTTP mode — refresh the cert metadata in place. */
+        /* No restart in HTTP mode -refresh the cert metadata in place. */
         await loadStatus();
         setUploading(false);
       }
@@ -232,7 +232,7 @@ export default function TlsSettingsPanel({
 
   return (
     <div className="sched-card">
-      <h3>Security — TLS / HTTPS</h3>
+      <h3>Security -TLS / HTTPS</h3>
       <p className="card-desc">
         The device can serve its web interface over HTTPS (port 443) with a TLS certificate,
         or over plain HTTP (port 80). HTTPS requires a valid certificate to be present.
@@ -251,7 +251,7 @@ export default function TlsSettingsPanel({
 
       {status?.tamper_suspected && (
         <div className="error-message" style={{ marginBottom: 12 }}>
-          ⚠ Certificate changed unexpectedly — verify device physical security and regenerate.
+          ⚠ Certificate changed unexpectedly -verify device physical security and regenerate.
         </div>
       )}
 
@@ -296,7 +296,7 @@ export default function TlsSettingsPanel({
             </button>
             {modeChanged && !savingMode && (
               <span style={{ marginLeft: 10, fontSize: '0.85em', opacity: 0.7 }}>
-                (unsaved — device will restart on save)
+                (unsaved -device will restart on save)
               </span>
             )}
           </div>

@@ -39,7 +39,16 @@ export function LocaleProvider({ children }) {
     return str;
   }, [locale]);
 
-  const value = useMemo(() => ({ locale, setLocale, toggleLocale, t }), [locale, setLocale, toggleLocale, t]);
+  /** Singular/plural noun for "bell" — BG: 1 звънец, 2+ звънеца. */
+  const bellWord = useCallback((n) => {
+    const count = Math.abs(Number(n) || 0);
+    return t(count === 1 ? 'schedule.bellWord.one' : 'schedule.bellWord.other');
+  }, [t]);
+
+  const value = useMemo(
+    () => ({ locale, setLocale, toggleLocale, t, bellWord }),
+    [locale, setLocale, toggleLocale, t, bellWord],
+  );
 
   return <LocaleContext.Provider value={value}>{children}</LocaleContext.Provider>;
 }

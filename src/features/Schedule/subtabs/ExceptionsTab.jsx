@@ -3,13 +3,30 @@ import { useSelector, useDispatch } from 'react-redux';
 import {
   fetchExceptions, fetchExceptionById,
   createException, updateException, deleteException, deleteAllExceptions,
-  clearError, clearSaveSuccess, clearExceptionDetail,
+  clearErrorExceptions, clearSaveSuccessExceptions, clearExceptionDetail,
 } from '../ScheduleSlice.js';
 import BellSetEditor from '../components/BellSetEditor.jsx';
 import HolidayImportDialog from '../components/HolidayImportDialog.jsx';
 import useLocale from '../../../hooks/useLocale.jsx';
+import useScrollIntoViewWhen from '../../../hooks/useScrollIntoViewWhen.js';
 
 const ACTIONS = ['dayOff', 'template', 'custom'];
+
+/** Client-side validation mirroring the firmware's own checks, so users get
+ *  immediate feedback instead of a round-trip 400. Returns a translation key
+ *  (or null when the form is valid). */
+function validateExceptionForm(form, templates) {
+  if (!form.startDate) return 'schedule.exceptions.errStartRequired';
+  if (form.endDate && form.endDate < form.startDate) return 'schedule.exceptions.errEndBeforeStart';
+  if (form.action === 'custom' && !(form.customBells?.bells?.length > 0)) {
+    return 'schedule.exceptions.errCustomEmpty';
+  }
+  if (form.action === 'template') {
+    const tpl = templates?.[form.templateIdx ?? 0];
+    if (!tpl || !(tpl.bells?.length > 0)) return 'schedule.exceptions.errTemplateEmpty';
+  }
+  return null;
+}
 
 /* Inline SVG icons (consistent with HolidayImportDialog) */
 const IconChevronLeft = (props) => (
@@ -72,16 +89,23 @@ function mergeDetail(meta, detail) {
 
 export default function ExceptionsTab() {
   const dispatch = useDispatch();
-  const { t } = useLocale();
-  const { exceptions: exState, exceptionDetail, templates, builtins, saving, error, saveSuccess } =
+  const { t, bellWord } = useLocale();
+  const { exceptions: exState, exceptionDetail, templates, builtins, savingExceptions, errorExceptions, saveSuccessExceptions } =
     useSelector((s) => s.schedule);
   const { items, total, offset, limit, hasMore, loading } = exState;
+  const saving = savingExceptions;
+  const error = errorExceptions;
+  const saveSuccess = saveSuccessExceptions;
+  const statusBannerRef = useScrollIntoViewWhen(Boolean(error || saveSuccess));
 
   // Which cards are open: Set<id>  (new items use 'new')
   const [openIds, setOpenIds] = useState(new Set());
 
   // Local edit state per card: Map<id, formValues>
   const [editForms, setEditForms] = useState(new Map());
+
+  // Per-card validation error (keyed by id, or 'new' for the create draft)
+  const [formErrors, setFormErrors] = useState(new Map());
 
   // "New exception" draft (null = not adding)
   const [newDraft, setNewDraft] = useState(null);
@@ -91,6 +115,12 @@ export default function ExceptionsTab() {
 
   // Delete-all confirmation
   const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
+
+  // Single-delete confirmation -id awaiting confirmation, or null
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+
+  // Overlap warning surfaced by the API after create/update
+  const [overlapNotice, setOverlapNotice] = useState(null); // { ids: [...] }
 
   const loadPage = useCallback((pageOffset) => {
     dispatch(fetchExceptions({ offset: pageOffset, limit }));
@@ -102,7 +132,7 @@ export default function ExceptionsTab() {
 
   useEffect(() => {
     if (saveSuccess) {
-      const id = setTimeout(() => dispatch(clearSaveSuccess()), 3000);
+      const id = setTimeout(() => dispatch(clearSaveSuccessExceptions()), 3000);
       return () => clearTimeout(id);
     }
   }, [saveSuccess, dispatch]);
@@ -153,30 +183,40 @@ export default function ExceptionsTab() {
     });
   };
 
+  const setFormError = (key, msg) =>
+    setFormErrors((prev) => { const m = new Map(prev); if (msg) m.set(key, msg); else m.delete(key); return m; });
+
   const handleSaveExisting = async (id) => {
     const form = editForms.get(id);
     if (!form) return;
+    const validationKey = validateExceptionForm(form, templates);
+    if (validationKey) { setFormError(id, t(validationKey)); return; }
+    setFormError(id, null);
     const payload = {
       startDate:      form.startDate,
       endDate:        form.endDate,
       label:          form.label,
       action:         form.action,
       templateIdx:    form.templateIdx ?? 0,
-      timeOffsetMin:  form.timeOffsetMin ?? 0,
+      timeOffsetMin:  0,
       customBells:    form.action === 'custom'
                         ? { bells: (form.customBells?.bells ?? []).map(({ _id, ...b }) => b) }
                         : undefined,
     };
-    await dispatch(updateException({ id, data: payload })).unwrap();
-    // Reload this item's detail and the list
-    dispatch(clearExceptionDetail(id));
-    loadPage(offset);
+    try {
+      const result = await dispatch(updateException({ id, data: payload })).unwrap();
+      setOverlapNotice(result?.overlapWarning ? { ids: result.overlappingIds || [] } : null);
+      // Reload this item's detail and the list
+      dispatch(clearExceptionDetail(id));
+      loadPage(offset);
+    } catch { /* error surfaces via state */ }
   };
 
   const handleDelete = async (id) => {
     await dispatch(deleteException(id)).unwrap();
     setOpenIds((prev) => { const s = new Set(prev); s.delete(id); return s; });
     setEditForms((prev) => { const m = new Map(prev); m.delete(id); return m; });
+    setFormError(id, null);
     dispatch(clearExceptionDetail(id));
     // Reload current page (or previous page if it became empty)
     const newOffset = items.length === 1 && offset > 0 ? offset - limit : offset;
@@ -185,20 +225,26 @@ export default function ExceptionsTab() {
 
   const handleCreateSave = async () => {
     if (!newDraft) return;
+    const validationKey = validateExceptionForm(newDraft, templates);
+    if (validationKey) { setFormError('new', t(validationKey)); return; }
+    setFormError('new', null);
     const payload = {
       startDate:     newDraft.startDate,
       endDate:       newDraft.endDate,
       label:         newDraft.label,
       action:        newDraft.action,
       templateIdx:   newDraft.templateIdx ?? 0,
-      timeOffsetMin: newDraft.timeOffsetMin ?? 0,
+      timeOffsetMin: 0,
       customBells:   newDraft.action === 'custom'
                        ? { bells: (newDraft.customBells?.bells ?? []).map(({ _id, ...b }) => b) }
                        : undefined,
     };
-    await dispatch(createException(payload)).unwrap();
-    setNewDraft(null);
-    loadPage(0); // Go back to first page to see the new item
+    try {
+      const result = await dispatch(createException(payload)).unwrap();
+      setOverlapNotice(result?.overlapWarning ? { ids: result.overlappingIds || [] } : null);
+      setNewDraft(null);
+      loadPage(0); // Go back to first page to see the new item
+    } catch { /* error surfaces via state */ }
   };
 
   const actionLabel = (action) => t(`calendar.action_${action}`) || action;
@@ -233,51 +279,32 @@ export default function ExceptionsTab() {
         </select>
       </div>
       {form.action === 'template' && (
-        <>
-          <div className="form-group">
-            <label className="form-label">{t('calendar.selectTemplate')}</label>
-            <select className="form-select" value={form.templateIdx ?? 0}
-              onChange={(e) => onPatch({ templateIdx: parseInt(e.target.value, 10) })}>
-              {templateOptions.length > 0
-                ? templateOptions.map((o) => <option key={o.idx} value={o.idx}>{o.label}</option>)
-                : <option disabled>{t('calendar.noTemplates')}</option>}
-            </select>
-          </div>
-          <div className="form-group">
-            <label className="form-label">{t('calendar.timeOffset')}</label>
-            <div className="form-row">
-              <input type="number" className="duration-input" min={-240} max={240}
-                value={form.timeOffsetMin}
-                onChange={(e) => onPatch({ timeOffsetMin: parseInt(e.target.value, 10) || 0 })} />
-              <span className="form-unit">{t('calendar.min')}</span>
-            </div>
-          </div>
-        </>
+        <div className="form-group">
+          <label className="form-label">{t('calendar.selectTemplate')}</label>
+          <select className="form-select" value={form.templateIdx ?? 0}
+            onChange={(e) => onPatch({ templateIdx: parseInt(e.target.value, 10) })}>
+            {templateOptions.length > 0
+              ? templateOptions.map((o) => <option key={o.idx} value={o.idx}>{o.label}</option>)
+              : <option disabled>{t('calendar.noTemplates')}</option>}
+          </select>
+        </div>
       )}
       {form.action === 'custom' && (
-        <>
-          <div className="form-group">
-            <label className="form-label">{t('calendar.timeOffset')}</label>
-            <div className="form-row">
-              <input type="number" className="duration-input" min={-240} max={240}
-                value={form.timeOffsetMin}
-                onChange={(e) => onPatch({ timeOffsetMin: parseInt(e.target.value, 10) || 0 })} />
-              <span className="form-unit">{t('calendar.min')}</span>
-            </div>
-          </div>
-          <div className="form-group">
-            <label className="form-label">
-              {t('calendar.customBells', { count: form.customBells?.bells?.length ?? 0 })}
-            </label>
-            <BellSetEditor
-              value={form.customBells || { bells: [] }}
-              onChange={(bellSet) => onPatch({ customBells: bellSet })}
-              allowApplyTemplate
-              templates={templates}
-              builtins={builtins}
-            />
-          </div>
-        </>
+        <div className="form-group">
+          <label className="form-label">
+            {t('calendar.customBells', {
+              count: form.customBells?.bells?.length ?? 0,
+              bellWord: bellWord(form.customBells?.bells?.length ?? 0),
+            })}
+          </label>
+          <BellSetEditor
+            value={form.customBells || { bells: [] }}
+            onChange={(bellSet) => onPatch({ customBells: bellSet })}
+            allowApplyTemplate
+            templates={templates}
+            builtins={builtins}
+          />
+        </div>
       )}
     </>
   );
@@ -316,15 +343,25 @@ export default function ExceptionsTab() {
         </div>
       </div>
 
-      {error && (
-        <div className="error-message">
-          {error}
-          <button className="error-dismiss" onClick={() => dispatch(clearError())}>×</button>
+      {(error || saveSuccess) && (
+        <div ref={statusBannerRef} className="status-banner-anchor">
+          {error && (
+            <div className="error-message">
+              {error}
+              <button className="error-dismiss" onClick={() => dispatch(clearErrorExceptions())}>×</button>
+            </div>
+          )}
+          {saveSuccess && (
+            <div className="success-message">{t('schedule.savedSuccess')}</div>
+          )}
         </div>
       )}
 
-      {saveSuccess && (
-        <div className="success-message">{t('schedule.savedSuccess')}</div>
+      {overlapNotice && (
+        <div className="warning-banner">
+          {t('schedule.exceptions.overlapWarning', { ids: overlapNotice.ids.join(', ') })}
+          <button className="error-dismiss" onClick={() => setOverlapNotice(null)}>×</button>
+        </div>
       )}
 
       {/* New exception draft card */}
@@ -335,9 +372,10 @@ export default function ExceptionsTab() {
           </div>
           <div className="collapsible-card-body">
             {renderForm(newDraft, (patch) => setNewDraft((prev) => ({ ...prev, ...patch })))}
+            {formErrors.get('new') && <div className="error-message">{formErrors.get('new')}</div>}
             <div className="action-bar">
               <button type="button" className="cancel-button"
-                onClick={() => setNewDraft(null)}>{t('schedule.cancel')}</button>
+                onClick={() => { setNewDraft(null); setFormError('new', null); }}>{t('schedule.cancel')}</button>
               <button type="button"
                 className={`save-button${saving ? ' loading' : ''}`}
                 onClick={handleCreateSave} disabled={saving}>
@@ -381,7 +419,7 @@ export default function ExceptionsTab() {
                         {actionLabel(ex.action)}
                       </span>
                       {ex.action === 'custom' && (
-                        <span className="cc-summary">{bellCount} {t('schedule.bellsCount')}</span>
+                        <span className="cc-summary">{bellCount} {bellWord(bellCount)}</span>
                       )}
                       {ex.action === 'template' && ex.templateIdx !== undefined && (
                         <span className="cc-summary">
@@ -389,7 +427,7 @@ export default function ExceptionsTab() {
                         </span>
                       )}
                       <button type="button" className="delete-btn"
-                        onClick={(e) => { e.stopPropagation(); handleDelete(ex.id); }}
+                        onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(ex.id); }}
                         title={t('calendar.removeException')}>×</button>
                     </div>
 
@@ -403,6 +441,7 @@ export default function ExceptionsTab() {
                               form ?? mergeDetail(ex, detail),
                               (patch) => patchForm(ex.id, patch)
                             )}
+                            {formErrors.get(ex.id) && <div className="error-message">{formErrors.get(ex.id)}</div>}
                             <div className="action-bar">
                               <button type="button"
                                 className={`save-button${saving ? ' loading' : ''}`}
@@ -477,6 +516,32 @@ export default function ExceptionsTab() {
                 }}>
                 <IconTrash style={{ marginRight: 6, verticalAlign: '-3px' }} />
                 {saving ? t('schedule.saving') : t('schedule.deleteAll')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {confirmDeleteId != null && (
+        <div className="confirm-modal-backdrop" role="dialog" aria-modal="true"
+          onClick={(e) => { if (e.target === e.currentTarget) setConfirmDeleteId(null); }}>
+          <div className="confirm-modal">
+            <h3>{t('schedule.exceptions.deleteConfirmTitle')}</h3>
+            <p>{t('schedule.exceptions.deleteConfirmBody')}</p>
+            <div className="confirm-modal-actions">
+              <button type="button" className="cancel-button"
+                onClick={() => setConfirmDeleteId(null)} disabled={saving}>
+                {t('schedule.cancel')}
+              </button>
+              <button type="button" className="danger-button"
+                disabled={saving}
+                onClick={async () => {
+                  const id = confirmDeleteId;
+                  setConfirmDeleteId(null);
+                  await handleDelete(id);
+                }}>
+                <IconTrash style={{ marginRight: 6, verticalAlign: '-3px' }} />
+                {saving ? t('schedule.saving') : t('calendar.removeException')}
               </button>
             </div>
           </div>

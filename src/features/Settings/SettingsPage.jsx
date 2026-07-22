@@ -16,6 +16,7 @@ import {
 import TokenManager from '../../utils/TokenManager.js';
 import TimezonePicker from '../Schedule/TimezonePicker.jsx';
 import useLocale from '../../hooks/useLocale.jsx';
+import useScrollIntoViewWhen from '../../hooks/useScrollIntoViewWhen.js';
 import FirmwareUpdatePanel from './FirmwareUpdatePanel.jsx';
 import TlsSettingsPanel from './TlsSettingsPanel.jsx';
 
@@ -176,17 +177,24 @@ export default function SettingsPage() {
   };
 
   const combinedError = error || scheduleError;
+  const statusBannerRef = useScrollIntoViewWhen(
+    Boolean(combinedError || saveSuccess || actionSuccess),
+  );
 
   return (
     <div className="settings-page">
-      {combinedError && (
-        <div className="error-message">
-          {combinedError}
-          <button className="error-dismiss" onClick={() => { dispatch(clearError()); dispatch(clearScheduleError()); }}>×</button>
+      {(combinedError || saveSuccess || actionSuccess) && (
+        <div ref={statusBannerRef} className="status-banner-anchor">
+          {combinedError && (
+            <div className="error-message">
+              {combinedError}
+              <button className="error-dismiss" onClick={() => { dispatch(clearError()); dispatch(clearScheduleError()); }}>×</button>
+            </div>
+          )}
+          {saveSuccess && <div className="success-message">{t('settings.settingsSaved')}</div>}
+          {actionSuccess && <div className="success-message">{actionSuccess}</div>}
         </div>
       )}
-      {saveSuccess && <div className="success-message">{t('settings.settingsSaved')}</div>}
-      {actionSuccess && <div className="success-message">{actionSuccess}</div>}
 
       {/* General Settings */}
       <div className="sched-card">

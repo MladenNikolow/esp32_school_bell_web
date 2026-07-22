@@ -1,4 +1,4 @@
-﻿# ESP32 School Bell — REST API Specification
+﻿# ESP32 School Bell -REST API Specification
 
 The React SPA is served from the ESP32-S3 itself (same origin), so all API calls use relative URLs. Authentication uses **HttpOnly session cookies**. CSRF protection is enforced on all mutating requests.
 
@@ -22,9 +22,9 @@ Set-Cookie: session=<32-hex-token>; HttpOnly; SameSite=Strict; Path=/
 ```json
 { "user": { "username": "school", "role": "client" }, "message": "Login successful" }
 ```
-`role` is `"service"` or `"client"`. Service passwords are per-device — see firmware `tools/service_password.py`.
+`role` is `"service"` or `"client"`. Service passwords are per-device -see firmware `tools/service_password.py`.
 
-**Errors:** 400 (bad JSON), 401 (invalid credentials), 429 (rate limited — max 5/60s, shared with claim)
+**Errors:** 400 (bad JSON), 401 (invalid credentials), 429 (rate limited -max 5/60s, shared with claim)
 
 ---
 
@@ -160,7 +160,7 @@ Deletes schedules/settings defaults, resets PIN + setup wizard, **deletes the cl
 ---
 
 ### GET /api/system/credentials
-**Access:** Authenticated — **service role only**
+**Access:** Authenticated -**service role only**
 
 ```json
 { "clientExists": true, "clientUsername": "teacher" }
@@ -169,7 +169,7 @@ Deletes schedules/settings defaults, resets PIN + setup wizard, **deletes the cl
 ---
 
 ### POST /api/system/credentials
-**Access:** Authenticated — **service role only**
+**Access:** Authenticated -**service role only**
 
 **Request:**
 ```json
@@ -181,7 +181,7 @@ Deletes schedules/settings defaults, resets PIN + setup wizard, **deletes the cl
 ---
 
 ### DELETE /api/system/credentials
-**Access:** Authenticated — **service role only**
+**Access:** Authenticated -**service role only**
 
 **Response 200:** `{ "success": true }`
 
@@ -244,7 +244,7 @@ Deletes schedules/settings defaults, resets PIN + setup wizard, **deletes the cl
 ## Schedule Endpoints
 
 All schedule data uses the **unified BellSet** model: `{ bells: [{ hour, minute, label }] }`.
-No per-bell `durationSec` — ring duration is a global setting in `/api/schedule/settings`.
+No per-bell `durationSec` -ring duration is a global setting in `/api/schedule/settings`.
 
 ### GET /api/schedule/settings
 **Access:** Authenticated
@@ -292,7 +292,7 @@ Returns the effective bell schedule for today, resolved by the scheduler (except
 }
 ```
 `source` is `"default"`, `"exception"`, or `"template"`.
-`multiDayException: true` means a multi-day exception covers today — saving will split it.
+`multiDayException: true` means a multi-day exception covers today -saving will split it.
 
 ---
 
@@ -411,7 +411,7 @@ Returns the factory-default bell set (read-only reference, never overwritten by 
 **Exception actions:**
 | `action`   | Extra fields                                |
 |------------|---------------------------------------------|
-| `dayOff`   | —                                           |
+| `dayOff`   | -                                          |
 | `template` | `templateIdx` (0–2 custom or builtin index), `timeOffsetMin` |
 | `custom`   | `bells`, optional `timeOffsetMin`           |
 
@@ -420,7 +420,7 @@ Returns the factory-default bell set (read-only reference, never overwritten by 
 ### POST /api/schedule/exceptions
 **Access:** Authenticated
 
-**Request:** `{ "exceptions": [...] }` (full list — server replaces entirely)
+**Request:** `{ "exceptions": [...] }` (full list -server replaces entirely)
 
 **Response 200:** `{ "exceptions": [...] }`
 

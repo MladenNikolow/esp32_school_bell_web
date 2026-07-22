@@ -51,5 +51,5 @@ async function walk(dir) {
 }
 
 walk(distDir)
-  .then(() => console.log("Compression complete — originals removed"))
+  .then(() => console.log("Compression complete -originals removed"))
   .catch(err => console.error("Error:", err));

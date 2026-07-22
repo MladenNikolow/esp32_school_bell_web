@@ -62,7 +62,7 @@ const FirmwareService = {
       xhr.setRequestHeader('Content-Type', 'application/octet-stream');
       xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
       xhr.withCredentials = true; /* send the session cookie */
-      xhr.timeout = 10 * 60 * 1000; /* 10 minutes — bundles are several MB */
+      xhr.timeout = 10 * 60 * 1000; /* 10 minutes -bundles are several MB */
 
       if (onProgress && xhr.upload) {
         xhr.upload.addEventListener('progress', (e) => {

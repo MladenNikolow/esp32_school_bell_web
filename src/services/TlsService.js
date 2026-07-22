@@ -5,7 +5,7 @@ import { API_CONFIG, getApiUrl } from '../config/apiConfig.js';
 const agent = HttpRequestAgent;
 
 /**
- * TlsService — wraps /api/system/tls* endpoints.
+ * TlsService -wraps /api/system/tls* endpoints.
  *
  * GET  /api/system/tls              → { enabled, source, port, subject_cn,
  *                                       fingerprint_sha256, not_before, not_after,

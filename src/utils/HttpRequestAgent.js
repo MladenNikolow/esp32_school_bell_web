@@ -86,7 +86,7 @@ class HttpRequestAgent {
    * Make a login request (unauthenticated)
    * The server responds with a Set-Cookie header containing the HttpOnly session cookie.
    * @param {Object} credentials - Login credentials
-   * @returns {Promise<any>} Authentication response (user info, message — no token)
+   * @returns {Promise<any>} Authentication response (user info, message -no token)
    */
   async login(credentials) {
     try {
@@ -150,7 +150,7 @@ class HttpRequestAgent {
    */
   async validateToken() {
     try {
-      // Always ask the server — the HttpOnly session cookie is the source of truth
+      // Always ask the server -the HttpOnly session cookie is the source of truth
       // and is shared across tabs (unlike sessionStorage).
       const response = await this.httpClient.get(API_CONFIG.ENDPOINTS.VALIDATE_TOKEN, { skipAuth: true, skipAuthErrorHandling: true });
       
@@ -178,7 +178,7 @@ class HttpRequestAgent {
   }
 
   /**
-   * @deprecated Token is HttpOnly — JS cannot read it. Returns placeholder.
+   * @deprecated Token is HttpOnly -JS cannot read it. Returns placeholder.
    * @returns {string|null}
    */
   getToken() {
@@ -209,9 +209,24 @@ class HttpRequestAgent {
    */
   async _parseResponse(response) {
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
+      let message = `HTTP ${response.status}`;
+      try {
+        const text = await response.text();
+        if (text) {
+          try {
+            const data = JSON.parse(text);
+            if (typeof data?.error === 'string' && data.error) message = data.error;
+            else if (typeof data?.message === 'string' && data.message) message = data.message;
+          } catch {
+            /* non-JSON error body -keep status fallback */
+          }
+        }
+      } catch {
+        /* ignore body read failures */
+      }
+      throw new Error(message);
     }
-    
+
     return this._parseResponseBody(response);
   }
 

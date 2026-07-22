@@ -49,7 +49,7 @@ async function preflightBundle(file) {
 
   if (buf.length < 8) return { ok: false, errorKey: 'settings.fwErrTooSmall' };
 
-  /* Magic check — first 4 bytes must spell "SBU1" */
+  /* Magic check -first 4 bytes must spell "SBU1" */
   const magic = String.fromCharCode(buf[0], buf[1], buf[2], buf[3]);
   if (magic !== SBU_MAGIC) return { ok: false, errorKey: 'settings.fwErrBadMagic' };
 
@@ -94,7 +94,7 @@ async function preflightBundle(file) {
 /*   3. Show a prominent danger warning explaining what will happen.          */
 /*   4. POST the binary body to /api/system/update with progress.             */
 /*   5. Poll /api/health until the device returns, then reload.               */
-/* The rollback action is intentionally NOT exposed in the UI — the           */
+/* The rollback action is intentionally NOT exposed in the UI -the           */
 /* bootloader handles automatic rollback when a new firmware fails to start.  */
 /* ------------------------------------------------------------------------- */
 export default function FirmwareUpdatePanel({ initialInfo = null, autoLoad = true, loadInfo = null }) {
@@ -135,7 +135,7 @@ export default function FirmwareUpdatePanel({ initialInfo = null, autoLoad = tru
     if (autoLoad && !initialInfo) refreshInfo();
   }, [autoLoad, initialInfo, refreshInfo]);
 
-  /* Warn the user if they try to navigate away mid-upload — a refresh would
+  /* Warn the user if they try to navigate away mid-upload -a refresh would
    * not actually cancel the upload on the server, but would lose the UI
    * progress and make recovery confusing. */
   useEffect(() => {
@@ -175,7 +175,7 @@ export default function FirmwareUpdatePanel({ initialInfo = null, autoLoad = tru
           setTimeout(() => window.location.reload(), 1200);
           return;
         }
-      } catch (_) { /* still down — keep polling */ }
+      } catch (_) { /* still down -keep polling */ }
       await new Promise((r) => setTimeout(r, 2000));
     }
     setError(t('settings.fwRebootTimeout'));
@@ -313,7 +313,7 @@ export default function FirmwareUpdatePanel({ initialInfo = null, autoLoad = tru
 
             {file && (
               <p className="card-desc" style={{ marginTop: 4 }}>
-                <strong>{file.name}</strong> — {formatBytes(file.size)}
+                <strong>{file.name}</strong> -{formatBytes(file.size)}
                 {preflightOK && preflight.fwVersion && (
                   <> · v{preflight.fwVersion}</>
                 )}

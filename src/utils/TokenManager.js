@@ -5,7 +5,7 @@
  * 
  * The actual auth token is stored as an HttpOnly session cookie by the server
  * (Set-Cookie header with no Expires/Max-Age). JavaScript cannot read or write
- * the cookie directly — the browser handles it automatically.
+ * the cookie directly -the browser handles it automatically.
  * 
  * This class only tracks lightweight client-side auth metadata (login timestamp)
  * in sessionStorage so the UI can determine authenticated state and session age.
@@ -37,7 +37,7 @@ class TokenManager {
 
   /**
    * Check if the client believes it is authenticated.
-   * This is a client-side hint only — the server is the source of truth
+   * This is a client-side hint only -the server is the source of truth
    * via the HttpOnly cookie.
    * @returns {boolean} True if auth metadata exists
    */
@@ -56,7 +56,7 @@ class TokenManager {
 
   /**
    * Clear client-side auth metadata.
-   * Note: This does NOT clear the HttpOnly cookie — that requires
+   * Note: This does NOT clear the HttpOnly cookie -that requires
    * a server call to /api/logout which responds with an expired Set-Cookie.
    * @returns {boolean} True if cleared successfully
    */

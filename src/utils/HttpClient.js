@@ -123,7 +123,7 @@ class HttpClient {
       }
     }
 
-    // Make the request — browser sends HttpOnly cookie automatically
+    // Make the request -browser sends HttpOnly cookie automatically
     const requestPriority = priority ?? (method === 'GET' ? 'visible' : 'critical');
     const normalizedUrl = new URL(url, window.location.origin).toString();
     const key = method === 'GET' && deduplicate ? `${method}:${normalizedUrl}` : null;

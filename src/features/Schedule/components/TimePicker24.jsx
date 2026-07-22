@@ -4,10 +4,10 @@ import React, { useId, useState, useEffect } from 'react';
  * 24-hour time picker with HH/MM steppers + numeric text entry.
  *
  * Props:
- *   value    — { hour: 0-23, minute: 0-59 }
- *   onChange — ({ hour, minute }) => void
- *   id       — optional base id for accessibility
- *   disabled — boolean
+ *   value    -{ hour: 0-23, minute: 0-59 }
+ *   onChange -({ hour, minute }) => void
+ *   id       -optional base id for accessibility
+ *   disabled -boolean
  */
 export default function TimePicker24({ value, onChange, id: baseId, disabled }) {
   const genId = useId();
@@ -15,7 +15,7 @@ export default function TimePicker24({ value, onChange, id: baseId, disabled }) 
 
   const { hour = 0, minute = 0 } = value || {};
 
-  // Draft strings — allow free typing; committed on blur
+  // Draft strings -allow free typing; committed on blur
   const [hourDraft, setHourDraft] = useState(String(hour).padStart(2, '0'));
   const [minuteDraft, setMinuteDraft] = useState(String(minute).padStart(2, '0'));
 
@@ -29,7 +29,7 @@ export default function TimePicker24({ value, onChange, id: baseId, disabled }) 
   const stepHour = (delta) => onChange({ hour: clamp((hour + delta + 24) % 24, 0, 23), minute });
   const stepMinute = (delta) => onChange({ hour, minute: clamp((minute + delta + 60) % 60, 0, 59) });
 
-  // Text input handlers — digits only, allow empty during typing
+  // Text input handlers -digits only, allow empty during typing
   const handleHourChange = (e) => {
     setHourDraft(e.target.value.replace(/\D/g, '').slice(0, 2));
   };
@@ -37,7 +37,7 @@ export default function TimePicker24({ value, onChange, id: baseId, disabled }) 
     setMinuteDraft(e.target.value.replace(/\D/g, '').slice(0, 2));
   };
 
-  // Commit on blur — parse, clamp, emit; empty reverts to last valid
+  // Commit on blur -parse, clamp, emit; empty reverts to last valid
   const commitHour = () => {
     const v = parseInt(hourDraft, 10);
     const committed = isNaN(v) ? hour : clamp(v, 0, 23);
