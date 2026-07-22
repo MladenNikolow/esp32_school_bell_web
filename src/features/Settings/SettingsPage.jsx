@@ -236,7 +236,7 @@ export default function SettingsPage() {
                 className="duration-slider"
                 id="ring-dur"
                 min={1}
-                max={300}
+                max={30}
                 value={ringDurationSec}
                 onChange={(e) => dispatch(setRingDurationSec(parseInt(e.target.value) || 1))}
               />
@@ -245,7 +245,7 @@ export default function SettingsPage() {
                   type="number"
                   className="duration-input"
                   min={1}
-                  max={300}
+                  max={30}
                   value={ringDurationSec}
                   onChange={(e) => dispatch(setRingDurationSec(parseInt(e.target.value) || 1))}
                 />
@@ -413,6 +413,10 @@ export default function SettingsPage() {
           <div className="info-item">
             <span className="info-label">{t('settings.date')}</span>
             <span className="info-value">{systemInfo?.date || '—'}</span>
+          </div>
+          <div className="info-item">
+            <span className="info-label">{t('settings.macAddress')}</span>
+            <span className="info-value">{systemInfo?.mac || '—'}</span>
           </div>
         </div>
 

@@ -211,13 +211,15 @@ Defined in `src/config/apiConfig.js`:
 | Public (no cookie needed) | Protected (cookie required) | Protected (service role only) |
 |---|---|---|
 | `/api/login` | `/api/schedule/*` | `/api/system/credentials` (GET/POST/DELETE) |
-| `/api/health` | `/api/bell/*` | |
-| `/api/status` | `/api/system/*` | |
-| `/api/wifi/status` | `/api/logout` | |
-| `/api/wifi/networks` | `/api/validate-token` | |
-| `/api/wifi/config` | `/api/refresh-token` | |
+| `/api/setup/claim-status` | `/api/bell/*` | |
+| `/api/setup/claim` | `/api/system/*` | |
+| `/api/health` | `/api/logout` | |
+| `/api/status` | `/api/validate-token` | |
+| `/api/wifi/status` | | |
+| `/api/wifi/networks` | | |
+| `/api/wifi/config` | | |
 
-**CSRF headers required**: All POST/PUT/DELETE requests to protected endpoints must include `Content-Type: application/json` and `X-Requested-With: XMLHttpRequest`.
+**CSRF headers required**: All POST/PUT/DELETE requests (including claim) must include `Content-Type: application/json` and `X-Requested-With: XMLHttpRequest`.
 
 ---
 
@@ -227,11 +229,17 @@ The server returns a `role` field in the login/validate responses: `"service"` o
 
 | Role | Access | Credential Management |
 |------|--------|-----------------------|
-| `service` | Full system access | Can create/update/delete client account |
-| `client` | Full system access | Cannot manage credentials |
+| `service` | Full system access (team / installer) | Can create/update/delete client account |
+| `client` | Day-to-day system access | Cannot manage credentials |
+
+### First-claim sign-up
+- While no client account exists, `LoginPage` shows **Create account** (after `GET /api/setup/claim-status`).
+- `AuthService.claimAccount()` → `POST /api/setup/claim`, then auto-login via `loginUser`.
+- After claim, the endpoint permanently returns `403 Device already claimed` (server hard gate).
+- Factory reset deletes the client account so the device is claimable again.
 
 ### Frontend Role Handling
-- `AuthSlice.js` stores `state.auth.user.role` from the server response
+- `AuthSlice.js` stores `state.auth.user.role` from the server response; also exports `claimAccount` thunk
 - `SettingsPage.jsx` checks `user.role === 'service'` to conditionally render the User Management section
 - `CredentialService.js` provides `getCredentials()`, `saveCredentials()`, `deleteCredentials()` API calls
 - `SettingsSlice.js` has `fetchCredentials`, `saveCredentials`, `deleteCredentials` async thunks
@@ -239,6 +247,8 @@ The server returns a `role` field in the login/validate responses: `"service"` o
 ### Credential Management (Service Role Only)
 | Action | Endpoint | Service |
 |--------|----------|---------|
+| Check claimable | `GET /api/setup/claim-status` | `AuthService.getClaimStatus()` |
+| First-claim create | `POST /api/setup/claim` | `AuthService.claimAccount()` |
 | Check client exists | `GET /api/system/credentials` | `CredentialService.getCredentials()` |
 | Create/update client | `POST /api/system/credentials` | `CredentialService.saveCredentials(username, password)` |
 | Delete client | `DELETE /api/system/credentials` | `CredentialService.deleteCredentials()` |
@@ -430,10 +440,11 @@ AuthGuard wraps the entire application. No protected route is accessible without
 
 | Endpoint | Method | Auth Required | Purpose |
 |----------|--------|:---:|---------|
-| `/api/login` | POST | No | Authenticate user, return JWT + user info |
+| `/api/login` | POST | No | Authenticate user, set session cookie |
+| `/api/setup/claim-status` | GET | No | Whether Create account is allowed |
+| `/api/setup/claim` | POST | No | One-shot create client account |
 | `/api/logout` | POST | Yes | Invalidate server session |
-| `/api/validate-token` | GET | Yes | Validate stored token, return user info |
-| `/api/refresh-token` | POST | Yes | Refresh an expiring token |
+| `/api/validate-token` | GET | Yes | Validate session cookie, return user info |
 | `/api/status` | GET | No | System status |
 | `/api/health` | GET | No | Health check |
 
@@ -442,18 +453,18 @@ AuthGuard wraps the entire application. No protected route is accessible without
 ```
 POST /api/login
 Content-Type: application/json
+X-Requested-With: XMLHttpRequest
 
 {
-  "username": "admin",
-  "password": "password123"
+  "username": "school",
+  "password": "changeme1"
 }
 ```
 
-**Success (200)**:
+**Success (200)** — session delivered via HttpOnly `Set-Cookie`:
 ```json
 {
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "user": { "username": "admin", "role": "admin" },
+  "user": { "username": "school", "role": "client" },
   "message": "Login successful"
 }
 ```
@@ -478,6 +489,16 @@ Content-Type: application/json
 | `auth.toggleDarkMode` | Toggle dark mode |
 | `auth.showPassword` | Show password |
 | `auth.hidePassword` | Hide password |
+| `auth.createAccountLink` | Create account |
+| `auth.createAccountTitle` | Create your account |
+| `auth.createAccount` | Create account |
+| `auth.creatingAccount` | Creating account... |
+| `auth.backToLogin` | Back to login |
+| `auth.confirmPassword` | Confirm password |
+| `auth.enterConfirmPassword` | Re-enter password |
+| `auth.passwordMinLength` | Password must be at least 8 characters |
+| `auth.passwordMismatch` | Passwords do not match |
+| `auth.deviceAlreadyClaimed` | This device already has an account. Please log in. |
 
 ---
 

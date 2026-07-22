@@ -202,6 +202,148 @@ body {
   margin-top: 32px;
 }
 
+.login-form--signup {
+  border-top: 3px solid #1976d2;
+}
+
+.login-signup-header {
+  margin: -8px 0 24px;
+}
+
+.login-back-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  color: #1976d2;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 16px;
+  transition: color 0.2s ease, opacity 0.2s ease;
+}
+
+.login-back-button:hover:not(:disabled) {
+  color: #0d47a1;
+}
+
+.login-back-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.login-signup-badge {
+  font-size: 1.35rem;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  color: #1565c0;
+  margin-bottom: 8px;
+  line-height: 1.25;
+}
+
+.login-signup-subtitle {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.45;
+  color: #607d8b;
+}
+
+.login-setup-panel {
+  margin-top: 28px;
+}
+
+.login-or-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  color: #90a4ae;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.login-or-divider::before,
+.login-or-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #e0e0e0;
+}
+
+.login-secondary-button {
+  width: 100%;
+  padding: 14px 18px;
+  background: transparent;
+  color: #1976d2;
+  border: 2px solid #1976d2;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.login-secondary-button:hover:not(:disabled) {
+  background: rgba(25, 118, 210, 0.08);
+  box-shadow: 0 2px 8px rgba(25, 118, 210, 0.15);
+  transform: translateY(-1px);
+}
+
+.login-secondary-button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.login-secondary-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.login-password-meter {
+  margin-top: 10px;
+}
+
+.login-password-meter-track {
+  height: 4px;
+  background: #e3f2fd;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.login-password-meter-bar {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.25s ease, background-color 0.25s ease;
+}
+
+.login-password-meter-bar.strength-1 {
+  width: 33%;
+  background: #ef5350;
+}
+
+.login-password-meter-bar.strength-2 {
+  width: 66%;
+  background: #42a5f5;
+}
+
+.login-password-meter-bar.strength-3 {
+  width: 100%;
+  background: #43a047;
+}
+
+.login-password-meter-hint {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  color: #78909c;
+}
+
 /* ============================================
    PASSWORD INPUT
    ============================================ */
@@ -3659,6 +3801,50 @@ body {
   .login-form {
     background: #424242;
     border-color: #616161;
+  }
+
+  .login-form--signup {
+    border-top-color: #64b5f6;
+  }
+
+  .login-signup-badge {
+    color: #90caf9;
+  }
+
+  .login-signup-subtitle,
+  .login-password-meter-hint {
+    color: #b0bec5;
+  }
+
+  .login-back-button {
+    color: #90caf9;
+  }
+
+  .login-back-button:hover:not(:disabled) {
+    color: #bbdefb;
+  }
+
+  .login-or-divider {
+    color: #90a4ae;
+  }
+
+  .login-or-divider::before,
+  .login-or-divider::after {
+    background: #616161;
+  }
+
+  .login-secondary-button {
+    color: #90caf9;
+    border-color: #64b5f6;
+  }
+
+  .login-secondary-button:hover:not(:disabled) {
+    background: rgba(100, 181, 246, 0.12);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  }
+
+  .login-password-meter-track {
+    background: #546e7a;
   }
   
   .form-label {

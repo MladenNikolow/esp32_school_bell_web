@@ -219,6 +219,8 @@ AuthGuard (validates session on startup)
 | SettingsSlice       | `/api/system/reboot`           | POST      |
 | SettingsSlice       | `/api/system/factory-reset`    | POST      |
 | SettingsSlice       | `/api/system/sync-time`        | POST      |
+| AuthService         | `/api/login`, `/api/logout`, `/api/validate-token` | POST/GET |
+| AuthService         | `/api/setup/claim-status`, `/api/setup/claim` | GET/POST |
 | CredentialService   | `/api/system/credentials`      | GET/POST/DELETE |
 | WiFiConfigSlice     | `/api/wifi/*`                  | various   |
 

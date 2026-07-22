@@ -151,6 +151,79 @@ class AuthService {
   }
 
   /**
+   * Check whether the device can still be claimed (no client account yet).
+   * @returns {Promise<{claimable: boolean}>}
+   */
+  async getClaimStatus() {
+    try {
+      const response = await this.httpClient.get(API_CONFIG.ENDPOINTS.SETUP_CLAIM_STATUS, {
+        skipAuth: true,
+        skipAuthErrorHandling: true,
+      });
+
+      if (!response.ok) {
+        return { claimable: false };
+      }
+
+      const data = await response.json();
+      return { claimable: !!data.claimable };
+    } catch (error) {
+      this.errorHandler.logError(error, 'claim-status', {});
+      return { claimable: false };
+    }
+  }
+
+  /**
+   * Create the first client account (allowed only while none exists).
+   * @param {LoginCredentials} credentials
+   * @returns {Promise<{success: boolean, message?: string}>}
+   */
+  async claimAccount(credentials) {
+    this.validateCredentials(credentials);
+
+    if (credentials.username.trim().length > 31) {
+      throw new Error('Username must be 1-31 characters');
+    }
+    if (credentials.password.length < 8) {
+      throw new Error('Password must be at least 8 characters');
+    }
+
+    try {
+      const response = await this.httpClient.post(
+        API_CONFIG.ENDPOINTS.SETUP_CLAIM,
+        {
+          username: credentials.username.trim(),
+          password: credentials.password,
+        },
+        { skipAuth: true }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const serverMessage = errorData.error || errorData.message;
+        if (response.status === 403) {
+          throw new Error(serverMessage || 'Device already claimed');
+        }
+        if (response.status === 429) {
+          throw new Error(serverMessage || 'Too many attempts. Please try again later.');
+        }
+        if (response.status === 400) {
+          throw new Error(serverMessage || 'Invalid account details');
+        }
+        throw new Error(serverMessage || `Account creation failed (${response.status})`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      if (error.message) {
+        throw error;
+      }
+      const errorInfo = this.errorHandler.handleAuthError(error, { action: 'claim' });
+      throw new Error(errorInfo.message);
+    }
+  }
+
+  /**
    * Validate credentials format
    * @param {LoginCredentials} credentials - Credentials to validate
    * @throws {Error} If credentials are invalid

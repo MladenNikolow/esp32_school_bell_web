@@ -2,6 +2,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import HttpRequestAgent from '../../utils/HttpRequestAgent.js';
 import TokenManager from '../../utils/TokenManager.js';
+import AuthService from '../../services/AuthService.js';
 
 // Async thunk for login
 export const loginUser = createAsyncThunk(
@@ -42,6 +43,20 @@ export const initializeAuth = createAsyncThunk(
       // On error, clear auth metadata and return unauthenticated state
       TokenManager.clearAuthSession();
       return { authenticated: false, user: null };
+    }
+  }
+);
+
+// Async thunk: first-claim account creation, then auto-login
+export const claimAccount = createAsyncThunk(
+  'auth/claimAccount',
+  async (credentials, { rejectWithValue }) => {
+    try {
+      await AuthService.claimAccount(credentials);
+      const data = await HttpRequestAgent.login(credentials);
+      return data;
+    } catch (err) {
+      return rejectWithValue(err.message || 'Account creation failed');
     }
   }
 );
@@ -132,6 +147,24 @@ const authSlice = createSlice({
         state.isAuthenticated = false;
         state.user = null;
         state.error = action.payload || 'Initialization failed';
+      })
+
+      // claimAccount (create account + auto-login)
+      .addCase(claimAccount.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(claimAccount.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.isAuthenticated = true;
+        state.user = action.payload.user || null;
+        state.error = null;
+      })
+      .addCase(claimAccount.rejected, (state, action) => {
+        state.isLoading = false;
+        state.isAuthenticated = false;
+        state.user = null;
+        state.error = action.payload || 'Account creation failed';
       });
   },
 });

@@ -40,6 +40,8 @@ export const API_CONFIG = {
     SYSTEM_SYNC_TIME: '/api/system/sync-time',
     SYSTEM_PIN: '/api/system/pin',
     SYSTEM_CREDENTIALS: '/api/system/credentials',
+    SETUP_CLAIM_STATUS: '/api/setup/claim-status',
+    SETUP_CLAIM: '/api/setup/claim',
     UI_SETTINGS_CORE: '/api/ui/settings/core',
     UI_SETTINGS_ACCESS: '/api/ui/settings/access',
     UI_SETTINGS_MAINTENANCE: '/api/ui/settings/maintenance',
@@ -64,6 +66,8 @@ export const API_CONFIG = {
     '/api/validate-token',
     '/api/health',
     '/api/status',
+    '/api/setup/claim-status',
+    '/api/setup/claim',
   ],
   
   // HTTP status codes

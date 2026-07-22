@@ -11,7 +11,7 @@ The React SPA is served from the ESP32-S3 itself (same origin), so all API calls
 
 **Request:**
 ```json
-{ "username": "admin", "password": "password123" }
+{ "username": "school", "password": "changeme1" }
 ```
 Headers: `Content-Type: application/json`, `X-Requested-With: XMLHttpRequest`
 
@@ -20,11 +20,37 @@ Headers: `Content-Type: application/json`, `X-Requested-With: XMLHttpRequest`
 Set-Cookie: session=<32-hex-token>; HttpOnly; SameSite=Strict; Path=/
 ```
 ```json
-{ "user": { "username": "admin", "role": "service" }, "message": "Login successful" }
+{ "user": { "username": "school", "role": "client" }, "message": "Login successful" }
 ```
-`role` is `"service"` or `"client"`.
+`role` is `"service"` or `"client"`. Service passwords are per-device — see firmware `tools/service_password.py`.
 
-**Errors:** 400 (bad JSON), 401 (invalid credentials), 429 (rate limited — max 5/min)
+**Errors:** 400 (bad JSON), 401 (invalid credentials), 429 (rate limited — max 5/60s, shared with claim)
+
+---
+
+### GET /api/setup/claim-status
+**Access:** Public
+
+**Response 200:**
+```json
+{ "claimable": true }
+```
+
+---
+
+### POST /api/setup/claim
+**Access:** Public (CSRF + rate-limited)
+
+**Request:**
+```json
+{ "username": "school", "password": "changeme1" }
+```
+
+Creates the client account only while none exists. Username must not equal the service username. Password min 8 chars.
+
+**Response 200:** `{ "success": true, "message": "Account created" }`
+
+**Errors:** 400, 403 (`Device already claimed`), 429
 
 ---
 
@@ -117,6 +143,8 @@ Set-Cookie: session=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0
 **Access:** Authenticated
 
 **Request:** `{}`
+
+Deletes schedules/settings defaults, resets PIN + setup wizard, **deletes the client account** (device becomes claimable again), invalidates sessions. Service account is retained.
 
 **Response 200:** `{ "success": true }`
 
