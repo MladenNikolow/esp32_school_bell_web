@@ -56,19 +56,12 @@ export const syncTime = createAsyncThunk(
   async () => ScheduleService.syncTime()
 );
 
-export const fetchPin = createAsyncThunk(
-  'settings/fetchPin',
-  async () => {
-    const data = await httpRequestAgent.get(API_CONFIG.ENDPOINTS.SYSTEM_PIN);
-    return data.pin;
-  }
-);
-
 export const savePin = createAsyncThunk(
   'settings/savePin',
   async (pin) => {
-    const data = await httpRequestAgent.post(API_CONFIG.ENDPOINTS.SYSTEM_PIN, { pin });
-    return data;
+    /* Response is status-only; never echo or retain the PIN client-side. */
+    await httpRequestAgent.post(API_CONFIG.ENDPOINTS.SYSTEM_PIN, { pin });
+    return true;
   }
 );
 
@@ -112,8 +105,6 @@ const settingsSlice = createSlice({
     error: null,
     actionSuccess: null,
     syncing: false,
-    currentPin: null,
-    pinLoading: false,
     pinSaving: false,
     clientCredentials: null,
     credentialsLoading: false,
@@ -149,20 +140,16 @@ const settingsSlice = createSlice({
       .addCase(fetchSettingsAccess.pending, (state) => {
         state.resources.access.status = 'loading';
         state.resources.access.error = null;
-        state.pinLoading = true;
         state.credentialsLoading = true;
       })
       .addCase(fetchSettingsAccess.fulfilled, (state, { payload }) => {
         state.resources.access = { status: 'ready', loadedAt: Date.now(), error: null };
-        state.pinLoading = false;
         state.credentialsLoading = false;
-        state.currentPin = payload.pin ?? state.currentPin;
         state.clientCredentials = payload.credentials;
       })
       .addCase(fetchSettingsAccess.rejected, (state, { error }) => {
         state.resources.access.status = 'error';
         state.resources.access.error = error.message;
-        state.pinLoading = false;
         state.credentialsLoading = false;
         if (error.name !== 'AbortError') state.error = error.message;
       })
@@ -225,19 +212,9 @@ const settingsSlice = createSlice({
         state.syncing = false;
         state.error = error.message;
       })
-      .addCase(fetchPin.pending, (state) => { state.pinLoading = true; })
-      .addCase(fetchPin.fulfilled, (state, { payload }) => {
-        state.pinLoading = false;
-        state.currentPin = payload;
-      })
-      .addCase(fetchPin.rejected, (state, { error }) => {
-        state.pinLoading = false;
-        if (error.name !== 'AbortError') state.error = error.message;
-      })
       .addCase(savePin.pending, (state) => { state.pinSaving = true; })
-      .addCase(savePin.fulfilled, (state, { payload, meta }) => {
+      .addCase(savePin.fulfilled, (state) => {
         state.pinSaving = false;
-        state.currentPin = payload?.pin ?? meta.arg;
         state.resources.access.loadedAt = Date.now();
         state.actionSuccess = 'PIN updated successfully';
       })

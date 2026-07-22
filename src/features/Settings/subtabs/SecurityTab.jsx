@@ -7,7 +7,7 @@ import TlsSettingsPanel from '../TlsSettingsPanel.jsx';
 export default function SecurityTab({ loadMaintenancePart, maintenanceReady }) {
   const dispatch = useDispatch();
   const { t } = useLocale();
-  const { currentPin, pinLoading, pinSaving, tlsStatus } = useSelector((s) => s.settings);
+  const { pinSaving, tlsStatus } = useSelector((s) => s.settings);
 
   const [newPin, setNewPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
@@ -37,24 +37,16 @@ export default function SecurityTab({ loadMaintenancePart, maintenanceReady }) {
         <h3>{t('settings.pinTitle')}</h3>
         <p className="card-desc">{t('settings.pinDesc')}</p>
 
-        <div className="settings-section">
-          <div className="settings-row">
-            <label className="form-label">{t('settings.pinCurrent')}</label>
-            <span className="info-value">
-              {pinLoading ? '...' : (currentPin || '—')}
-            </span>
-          </div>
-        </div>
-
         <div className="settings-section" style={{ borderBottom: 'none', marginBottom: 0 }}>
           <h4>{t('settings.pinChange')}</h4>
           {pinError && <div className="error-message" style={{ marginBottom: 8 }}>{pinError}</div>}
           <div className="settings-row">
             <label className="form-label">{t('settings.pinNew')}</label>
             <input
-              type="text"
+              type="password"
               className="form-input"
               inputMode="numeric"
+              autoComplete="new-password"
               pattern="\d{4,6}"
               maxLength={6}
               value={newPin}
@@ -69,9 +61,10 @@ export default function SecurityTab({ loadMaintenancePart, maintenanceReady }) {
           <div className="settings-row">
             <label className="form-label">{t('settings.pinConfirm')}</label>
             <input
-              type="text"
+              type="password"
               className="form-input"
               inputMode="numeric"
+              autoComplete="new-password"
               pattern="\d{4,6}"
               maxLength={6}
               value={confirmPin}

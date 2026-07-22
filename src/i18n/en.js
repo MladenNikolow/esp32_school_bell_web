@@ -319,7 +319,6 @@ const en = {
   // Touchscreen PIN
   'settings.pinTitle': 'Touchscreen PIN',
   'settings.pinDesc': 'A 4–6 digit PIN protects actions on the device screen, such as testing the bell or enabling panic mode.',
-  'settings.pinCurrent': 'Current PIN',
   'settings.pinChange': 'Change PIN',
   'settings.pinNew': 'New PIN',
   'settings.pinConfirm': 'Confirm PIN',

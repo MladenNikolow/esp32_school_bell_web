@@ -318,7 +318,6 @@ const bg = {
   // Touchscreen PIN
   'settings.pinTitle': 'ПИН за тъчскрийн',
   'settings.pinDesc': 'ПИН с 4–6 цифри защитава действия на екрана на устройството, като тест на звънеца или паник режим.',
-  'settings.pinCurrent': 'Текущ ПИН',
   'settings.pinChange': 'Смяна на ПИН',
   'settings.pinNew': 'Нов ПИН',
   'settings.pinConfirm': 'Потвърди ПИН',
