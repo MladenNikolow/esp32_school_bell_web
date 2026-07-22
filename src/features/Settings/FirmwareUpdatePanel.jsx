@@ -243,7 +243,7 @@ export default function FirmwareUpdatePanel({ initialInfo = null, autoLoad = tru
         </div>
       )}
 
-      {/* Current firmware info ---------------------------------------------- */}
+      {/* Current software version ------------------------------------------- */}
       <div className="settings-section">
         <h4>{t('settings.currentFirmware')}</h4>
         {loading && <p className="card-desc">…</p>}
@@ -254,31 +254,15 @@ export default function FirmwareUpdatePanel({ initialInfo = null, autoLoad = tru
               <span className="info-value">{info.fw_version || '—'}</span>
             </div>
             <div className="info-item">
-              <span className="info-label">{t('settings.fwRunningSlot')}</span>
-              <span className="info-value">{info.running_partition}</span>
-            </div>
-            <div className="info-item">
-              <span className="info-label">{t('settings.fwBootSlot')}</span>
-              <span className="info-value">{info.boot_partition}</span>
-            </div>
-            <div className="info-item">
-              <span className="info-label">{t('settings.fwFatfsSlot')}</span>
-              <span className="info-value">fatfs_react_{info.fatfs_slot}</span>
-            </div>
-            <div className="info-item">
               <span className="info-label">{t('settings.fwPending')}</span>
               <span className={`info-value${isPending ? ' text-warn' : ''}`}>
                 {isPending ? t('settings.fwPendingYes') : t('settings.fwPendingNo')}
               </span>
             </div>
-            <div className="info-item">
-              <span className="info-label">{t('settings.fwFreeHeap')}</span>
-              <span className="info-value">{formatBytes(info.free_heap)}</span>
-            </div>
           </div>
         )}
         <div style={{ marginTop: 12 }}>
-          <button className="refresh-btn" onClick={refreshInfo} disabled={loading || busy}>
+          <button type="button" className="refresh-btn" onClick={refreshInfo} disabled={loading || busy}>
             {t('settings.refresh')}
           </button>
         </div>
