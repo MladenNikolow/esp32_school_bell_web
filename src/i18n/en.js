@@ -289,6 +289,7 @@ const en = {
   'settings.fwWaitingOnline': 'Waiting for the device to come back online…',
   'settings.fwDone': 'Software update complete. Reloading page…',
   'settings.fwRebootTimeout': 'The device did not come back online within 90 seconds. Check the device manually.',
+  'settings.fwRebootDidNotStart': 'The update was accepted, but the device did not restart. Power-cycle the device once to finish installing, then open this page again.',
   'settings.fwUploadConfirm': 'Install software v{version}?\n\nFile: {name} ({size})\n\nThis replaces the software and web interface. The device will restart and be unavailable for up to about 30 seconds. Continue?',
   // Client-side preflight errors
   'settings.fwErrNoFile':         'No file selected.',

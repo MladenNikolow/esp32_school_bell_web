@@ -155,11 +155,20 @@ export default function FirmwareUpdatePanel({ initialInfo = null, autoLoad = tru
     setPreflight(res);
   };
 
-  /* Watchdog for the post-reboot recovery phase. */
-  const waitForReboot = useCallback(async () => {
+  /* Watchdog for the post-reboot recovery phase.
+   * Require the device to actually go offline once before treating a
+   * successful /api/health as "back after reboot". Otherwise a missed
+   * backend reboot (commit without restart) looks like success. */
+  const waitForReboot = useCallback(async (rebootInMs = 1500) => {
+    setPhase('rebooting');
+    const settleMs = Math.max(500, Number(rebootInMs) || 1500) + 500;
+    await new Promise((r) => setTimeout(r, settleMs));
     setPhase('waiting');
-    const deadline = Date.now() + 90 * 1000; /* 90 s max */
-    await new Promise((r) => setTimeout(r, 3000));
+
+    const deadline = Date.now() + 90 * 1000;
+    let sawDown = false;
+    let consecutiveOk = 0;
+
     while (Date.now() < deadline) {
       try {
         const r = await HttpClient.get('/api/health', {
@@ -169,16 +178,32 @@ export default function FirmwareUpdatePanel({ initialInfo = null, autoLoad = tru
           deduplicate: false,
         });
         if (r.ok) {
-          setPhase('done');
-          /* Force a hard reload so the new bundle is fetched and the session
-           * (which was lost across the reboot) is re-acquired via login. */
-          setTimeout(() => window.location.reload(), 1200);
-          return;
+          if (sawDown) {
+            consecutiveOk += 1;
+            if (consecutiveOk >= 2) {
+              setPhase('done');
+              /* Force a hard reload so the new bundle is fetched and the session
+               * (which was lost across the reboot) is re-acquired via login. */
+              setTimeout(() => window.location.reload(), 1200);
+              return;
+            }
+          } else {
+            consecutiveOk = 0;
+          }
+        } else {
+          sawDown = true;
+          consecutiveOk = 0;
         }
-      } catch (_) { /* still down -keep polling */ }
+      } catch (_) {
+        sawDown = true;
+        consecutiveOk = 0;
+      }
       await new Promise((r) => setTimeout(r, 2000));
     }
-    setError(t('settings.fwRebootTimeout'));
+
+    setError(sawDown
+      ? t('settings.fwRebootTimeout')
+      : t('settings.fwRebootDidNotStart'));
     setPhase('idle');
   }, [t]);
 
@@ -196,9 +221,8 @@ export default function FirmwareUpdatePanel({ initialInfo = null, autoLoad = tru
     setProgress(0);
     setPhase('uploading');
     try {
-      await FirmwareService.uploadBundle(file, (p) => setProgress(p.percent));
-      setPhase('rebooting');
-      await waitForReboot();
+      const result = await FirmwareService.uploadBundle(file, (p) => setProgress(p.percent));
+      await waitForReboot(result?.reboot_in_ms || 1500);
     } catch (e) {
       setError(e.message || String(e));
       setPhase('idle');
