@@ -266,8 +266,8 @@ const bg = {
   // Software Update
   'settings.firmwareUpdate': 'Актуализация на софтуера',
   'settings.firmwareUpdateDesc': 'Инсталирайте нова версия от подписан .sbu файл. Актуализацията заменя софтуера на устройството и уеб интерфейса, след което рестартира устройството.',
-  'settings.currentFirmware': 'Инсталирана версия',
-  'settings.fwVersion': 'Версия',
+  'settings.currentFirmware': 'Инсталиран софтуер',
+  'settings.fwVersion': 'Версия на софтуера',
   'settings.fwRunningSlot': 'Активен слот',
   'settings.fwBootSlot': 'Слот при стартиране',
   'settings.fwFatfsSlot': 'Слот за ресурси',

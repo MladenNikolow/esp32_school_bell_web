@@ -267,8 +267,8 @@ const en = {
   // Software Update
   'settings.firmwareUpdate': 'Software Update',
   'settings.firmwareUpdateDesc': 'Install a new software version from a signed .sbu file. The update replaces both the device software and the web interface, then restarts the device.',
-  'settings.currentFirmware': 'Installed Version',
-  'settings.fwVersion': 'Version',
+  'settings.currentFirmware': 'Installed Software',
+  'settings.fwVersion': 'Software Version',
   'settings.fwRunningSlot': 'Running Slot',
   'settings.fwBootSlot': 'Next Boot Slot',
   'settings.fwFatfsSlot': 'Asset Slot',
